@@ -1,0 +1,2 @@
+as -32 linear.s -o linear.o
+ld -m elf_i386 linear.o -l c -dynamic-linker /lib/ld-linux.so.2 -o linear
