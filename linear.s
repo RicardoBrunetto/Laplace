@@ -29,6 +29,9 @@ matriz_aux:   .int      0
 contadorLn:   .int      0
 contadorEq:   .int      0
 N:            .int      0
+indice_ln:    .int      0
+indice_col:   .int      0
+det_valor:    .int      0
 
 return_add1:  .int      0
 return_add2:  .int      0
@@ -63,15 +66,15 @@ matricial_linear:
    pushl return_add3
 ret
 
-# Avança para o proximo campo (4 bytes)
+# Avança para o proximo campo (4 bytes) de %edi
 proximo_campo:
-  popl %edx
+  popl return_addJ
 
   popl %edi
   addl $4, %edi
   pushl %edi
 
-  pushl %edx
+  pushl return_addJ
 ret
 
 # Avança %eax campos (é como se fosse um proximo_campo de %eax loops)
@@ -228,11 +231,11 @@ loop_mostrar_matriz:
 ret
 
 
-# Calcula o determinante da matriz cujo endereço está em %edi
+# Calcula o determinante da matriz cujo endereço está em %edi e a ordem em %ebx
 determinante:
-  cmpl $1, N
+  cmpl $1, %ebx
   je ordem_1
-   cmpl $2, N
+   cmpl $2, %ebx
   je ordem_2
 
 # Para matrizes de ordem maior igual a 3 [endereço da matriz continua em %edi]
@@ -253,10 +256,42 @@ ordem_maior_igual_3:
 pular_segunda_linha:
   movl N, %eax
   incl %eax
-  call pular # avança N+1 campos (considera a resposta), ou seja, vai para [1][0] - 1º elemento da segunda linha da MP
+  call pular
 
 
   movl $0, %edx # percorre a primeira linha
+
+
+# Pré-Condição:
+#   Ordem da matriz principal está em %eax
+#   Coluna fixa está em %ebx
+#   Endereço da matriz auxiliar está em %esi
+#   Endereço da matriz principal está em %edi
+# Pós-Condição:
+#   Matriz de cofatores em %esi
+# Registradores Alterados:
+#   %ebx  %ecx  %edx
+matriz_cofator:
+  # Avança para a segunda linha
+  pushl %eax # pular altera o eax
+  pushl %edi
+  incl %eax
+  call pular # avança N+1 campos (considera a resposta), ou seja, vai para [1][0] - 1º elemento da segunda linha da MP
+  popl %edi
+
+  popl %eax # recupera a ordem da matriz principal
+  pushl %eax
+  # Calcula a quantidade de elementos da matriz principal, exceto a primeira linha
+  mull %eax # (%eax x %eax)
+  movl %eax, %ecx # move para %ecx
+  popl %eax
+  subl %ecx, %eax # (%ecx <- %ecx - %eax)
+
+  loop_matriz_cofator:
+    # verifica se acabou o loop
+    cmpl
+
+ret
 
 
 ordem_1:
@@ -293,9 +328,9 @@ _start:
   movl matriz, %edi # coloca o endereço inicial da matriz em %edi
   pushl %edi # coloca %edi na pilha
 
-  call pular_segunda_linha
+  # call pular_segunda_linha
 
-#  call mostrar_matriz
+  call mostrar_matriz
 
 
 fim:
