@@ -110,35 +110,35 @@ ler_equacao:
   popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
   movl N, %ecx
 
-loop_ler_equacao:
-  movl %ecx, contadorEq # faz backup do valor de ecx (contador)
+  loop_ler_equacao:
+    movl %ecx, contadorEq # faz backup do valor de ecx (contador)
 
-  pushl contadorEq
-  pushl $pedirXn
-  call printf
-  addl $8, %esp
+    pushl contadorEq
+    pushl $pedirXn
+    call printf
+    addl $8, %esp
 
-  # %edi está na pilha
-  pushl $formatoNum
-  call scanf
-  addl $4, %esp
+    # %edi está na pilha
+    pushl $formatoNum
+    call scanf
+    addl $4, %esp
 
-  call proximo_campo
+    call proximo_campo
 
-  movl contadorEq, %ecx
-  loop loop_ler_equacao
+    movl contadorEq, %ecx
+    loop loop_ler_equacao
 
-  # Acabaram os coeficientes de xn. Pede o resultado da equação.
-  pushl contadorLn
-  pushl $pedirRes
-  call printf
-  addl $8, %esp
+    # Acabaram os coeficientes de xn. Pede o resultado da equação.
+    pushl contadorLn
+    pushl $pedirRes
+    call printf
+    addl $8, %esp
 
-  pushl $formatoNum
-  call scanf
-  addl $4, %esp
+    pushl $formatoNum
+    call scanf
+    addl $4, %esp
 
-  call proximo_campo # deixa %edi pronto para a proxima linha
+    call proximo_campo # deixa %edi pronto para a proxima linha
 
   pushl return_add2
 ret
@@ -149,23 +149,28 @@ ler_dados:
   pushl %edi # coloca %edi na pilha
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
-loop_ler_dados:
-  movl %ecx, contadorLn # faz backup do valor de ecx (contador)
+  loop_ler_dados:
+    movl %ecx, contadorLn # faz backup do valor de ecx (contador)
 
-  pushl %ecx
-  push $pedirLn
-  call printf
-  addl $8, %esp
+    pushl %ecx
+    push $pedirLn
+    call printf
+    addl $8, %esp
 
-  call ler_equacao
+    call ler_equacao
 
-  movl contadorLn, %ecx
-  loop loop_ler_dados
+    movl contadorLn, %ecx
+    loop loop_ler_dados
 
-  pushl return_add1 # empilha o endereço de retorno
+    pushl return_add1 # empilha o endereço de retorno
 ret
 
-# Aloca a matriz de %eax x %ebx bytes e guarda o ponteiro em %edi
+# Pré-Condição:
+#   Ordem da matriz está em %eax (linhas) e %eax (colunas)
+# Pós-Condição:
+#   Endereço do primeiro elemento da nova matriz em %edi
+# Registradores Alterados:
+#   %eax  %ecx
 alocar_matriz:
   movl $4, %ecx
   mull %ebx # multiplica %eax x %ebx
@@ -173,35 +178,17 @@ alocar_matriz:
 
   movl %eax, %ecx
   pushl %ecx
-  call malloc
+  call malloc # automaticamente desempilha %ecx
   addl $4, %esp
   movl %eax, %edi
 ret
 
-# Supoe que o bloco de memória está em %edi
-mostrar_linha:
-  popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
-  movl N, %ecx
-  incl %ecx # mostrar os n+1 inteiros
-
-loop_mostrar_linha:
-  movl %ecx, contadorEq # faz backup do valor de ecx (contador)
-
-  # %edi está na pilha
-  pushl (%edi)
-  pushl $mostrar_elem
-  call printf
-  addl $8, %esp
-
-  call proximo_campo
-
-  movl contadorEq, %ecx
-  loop loop_mostrar_linha
-
-  pushl return_add2
-ret
-
-# mostra a matriz que está em %edi
+# Pré-Condição:
+#   Endereço do primeiro elemento da matriz em %edi
+# Pós-Condição:
+#   Mostra a matriz na tela
+# Registradores Alterados:
+#   %ecx  %edi
 mostrar_matriz:
   pushl $divisoria
   call printf
@@ -212,22 +199,44 @@ mostrar_matriz:
   popl return_add1 # guarda o endereço de retorno
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
-loop_mostrar_matriz:
-  movl %ecx, contadorLn # faz backup do valor de ecx (contador)
+  loop_mostrar_matriz:
+    movl %ecx, contadorLn # faz backup do valor de ecx (contador)
 
-  push $pulaLinha
-  call printf
-  addl $4, %esp
+    push $pulaLinha
+    call printf
+    addl $4, %esp
 
-  call mostrar_linha
+    call mostrar_linha
 
-  movl contadorLn, %ecx
-  loop loop_mostrar_matriz
+    movl contadorLn, %ecx
+    loop loop_mostrar_matriz
 
-  pushl $divisoria
-  call printf
-  addl $4, %esp
-  pushl return_add1 # empilha o endereço de retorno
+    pushl $divisoria
+    call printf
+    addl $4, %esp
+    pushl return_add1 # empilha o endereço de retorno
+    ret
+
+    mostrar_linha:
+      popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
+      movl N, %ecx
+      incl %ecx # mostrar os n+1 inteiros
+
+      loop_mostrar_linha:
+        movl %ecx, contadorEq # faz backup do valor de ecx (contador)
+
+        # %edi está na pilha
+        pushl (%edi)
+        pushl $mostrar_elem
+        call printf
+        addl $8, %esp
+
+        call proximo_campo
+
+        movl contadorEq, %ecx
+        loop loop_mostrar_linha
+
+        pushl return_add2
 ret
 
 
@@ -284,12 +293,14 @@ matriz_cofator:
   # Calcula a quantidade de elementos da matriz principal, exceto a primeira linha
   mull %eax # (%eax x %eax)
   movl %eax, %ecx # move para %ecx
-  popl %eax
-  subl %ecx, %eax # (%ecx <- %ecx - %eax)
+  popl %eax # ¨%eax recebe a ordem da matriz novamente
+  subl %ecx, %eax # (%ecx <- %ecx - %eax) - assim temos nxn - n
+
+
 
   loop_matriz_cofator:
     # verifica se acabou o loop
-    cmpl
+#    cmpl
 
 ret
 
@@ -297,6 +308,47 @@ ret
 ordem_1:
 
 ordem_2:
+
+# Pré-Condição:
+#   Endereço da matriz auxiliar já alocada está em %esi
+# Pós-Condição:
+#   Matriz sem a última coluna está em %esi
+# Registradores Alterados:
+#   %edi %ecx %ebx
+gerar_matriz_sem_z:
+  popl return_add1 # guarda o endereço de retorno
+  movl N, %ecx # quantidade de vezes que o loop_dados vai executar
+
+  loop_gerar_matriz_sem_z:
+    movl %ecx, contadorLn # faz backup do valor de ecx (contador)
+
+    call mostrar_linha
+
+    # %edi estará em um elemnto [k][N] e deve-se pular o elemento [k][N+1]
+    addl $4, %edi # pula para o proximmo elemento de %edi
+
+    movl contadorLn, %ecx
+    loop loop_gerar_matriz_sem_z
+
+    pushl return_add1 # empilha o endereço de retorno
+    ret
+    gerar_matriz_sem_z_loop_interno:
+      popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
+      movl N, %ecx
+
+      loop_mostrar_linha:
+        movl %ecx, contadorEq # faz backup do valor de ecx (contador)
+
+        movl (%edi), %esi # copia o elemento para a posição atual em %esi
+        addl $4, %esi # move para o proximo espaço em %esi
+        addl $4, %edi # move para o proximo espaço em %edi
+
+        movl contadorEq, %ecx
+        loop loop_gerar_matriz_sem_z_loop_interno
+
+        pushl return_add2
+ret
+
 
 
 
