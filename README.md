@@ -8,5 +8,6 @@ Implementação em Assembly de um resolutor de sistemas lineares de N equações
   - [x] Gerar submatriz (cofator Aij)
   - [x] Cálculo do sinal de cofator
   - [ ] Cálculo de Laplace
+    - [ ] Lógica para calcular o determinante parcialmente
 - [ ] Inversão de colunas
 - [ ] Regra de Cramer

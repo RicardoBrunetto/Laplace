@@ -270,34 +270,74 @@ ret
 # Registradores Alterados:
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
+  pushl %edi # Guarda o endereço da matriz atual
+  pushl %ebx
+
   cmpl $1, %ebx
   je ordem_1
    cmpl $2, %ebx
   je ordem_2
 
-# Para matrizes de ordem maior igual a 3 [endereço da matriz continua em %edi]
-ordem_maior_igual_3:
-  movl N, %ecx
-  decl %ecx # considera N-1 de dimensão
-  movl $4, %eax
-  mull %ecx
-  mull %ecx # 4x(N-1 x N-1)
+  # Para matrizes de ordem maior igual a 3 [endereço da matriz continua em %edi]
+  ordem_maior_igual_3:
+    movl %ebx, %ecx
+    decl %ecx # considera N-1 de dimensão
+    movl $4, %eax
+    mull %ecx
+    mull %ecx # 4x(N-1 x N-1)
 
-  # pushl %eax
-  # call malloc
-  # movl %eax, matriz_aux # aloca a matriz auxiliar de dimensão N-1 por N-1
-  addl $4, %esp
+    movl $0, %ecx # Quantidade de colunas a serem fixadas
 
-  movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz principal [MP]
+    loop_ordem_maior_igual_3:
+        incl %ecx
+        movl %ecx, indice_fcol
 
-pular_segunda_linha:
-  movl N, %eax
-  incl %eax
-  call pular
+        movl %ecx, %eax
+        movl %ecx, %ebx
+        call alocar_matriz
+        movl %edi, matriz_aux
+        movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz auxiliar (n-1 x n-1)
+
+        movl indice_fcol, %ecx
+        popl %ebx # recoloca a ordem da matriz atual em %ebx
+        popl %edi # %edi volta a ter o endereço da matriz atual
+
+        pushl %edi # salva novamente o endereço da matriz atual
+        pushl %ebx # salva novamente a ordem da matriz
+        pushl %ecx # salva a coluna fixada
+
+        call submatriz # encontra a submatriz
+
+        movl %esi, %edi # Agora %edi é a submatriz
+
+        call determinante # calcula o determinante da submatriz
+
+        popl indice_fcol
+        call sinal_cofator # diz por quanto o determinante deve ser multiplicado com base na coluna fixada
+
+        mull det_valor # (-1)^(1+indice_fcol) * det_valor
+        addl %eax, det_valor # det_total += det_parcial
 
 
-  movl $0, %edx # percorre a primeira linha
+        # verifica a quantidade de colunas ainda restantes a serem fixadas
+        movl indice_fcol, %ecx
+        popl %ebx # recupera a ordem da matriz
+        pushl %ebx
+        cmpl %ecx, %ebx
+        jle loop_ordem_maior_igual_3
+    # loop loop_ordem_maior_igual_3
 
+
+    ordem_1:
+
+    ordem_2:
+      popl %ebx
+      popl %edi
+
+      movl det_valor, %eax
+      addl $
+
+ret
 
 # Pré-Condição:
 #   Coluna fixa está em indice_fcol
@@ -324,7 +364,7 @@ ret
 # Pós-Condição:
 #   A submatriz (desconsiderando a coluna %ebx e a primeira linha) de %edi em %esi
 # Registradores Alterados:
-#   %eax %ebx %ecx %edx %edi (%esi é recalculado - não altera)
+#   %eax %ecx %edx %edi (%esi e %ebx são recalculados - não alteram)
 submatriz:
   # Avança para a segunda linha
   pushl %edi
@@ -360,18 +400,11 @@ submatriz:
   # retorna %esi para o valor original
   decl %ebx # n-1
   movl %ebx, %eax
+  incl %ebx # retorna %ebx para o valor original
   mull %eax # (n-1 x n-1)
   addl $4, %eax # último add não considerado
   subl %eax, %esi # move para o proximo espaço em %esi
 ret
-
-
-ordem_1:
-
-ordem_2:
-
-
-
 
 # Pré-Condição:
 #   Endereço da matriz auxiliar já alocada está em %esi
