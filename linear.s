@@ -9,20 +9,21 @@ divisoria:            .asciz    "\n---------------------------------------------
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
 input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*xn + ... + c2*x2 + c1*x1 = res_xn\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada xi\t\t*%s"
 
-jumped: .asciz  "Jumped: %X\n"
-
 pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
 
 pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
 pedirXn:    .asciz    "\nInforme o coeficiente de x%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
 
-mostrar_elemdois:   .asciz  "\nMostrarElem: %d\t\n"
-mostrar_reg:   .asciz  "\nMostrarReg: %X\t\n"
+# mostrar_elemdois:   .asciz  "\nMostrarElem: %d\t\n"
+# mostrar_reg:   .asciz  "\nMostrarReg: %X\t\n"
+
+double:   .asciz  "\nOPA: %d\t%d\n"
+
+inserido:   .asciz  "\nTHIS ONE: %d\n"
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
-formatoPtr:  .asciz  "#%d: PONTEIROS: %X\t%X\n"
 formatoChar:    .asciz  "%c"
 formatoNum:     .asciz  "%d"
 pulaLinha:      .asciz  "\n"
@@ -32,8 +33,7 @@ matriz_aux:   .int      0
 contadorLn:   .int      0
 contadorEq:   .int      0
 N:            .int      0
-indice_ln:    .int      0
-indice_col:   .int      0
+indice_fcol:  .int      0
 det_valor:    .int      0
 
 return_add1:  .int      0
@@ -87,30 +87,25 @@ ret
 
 # Pré-Condição:
 #   Endereço de memória no topo da pilha
-#   Quantidade de bytes em %eax
+#   Quantidade de bytes em %ebx
 # Pós-Condição:
 #   Avança %eax bytes em %edi (%edi = %edi + 4x%eax) e o empilha
 # Registradores Alterados:
-#   %edi  %eax  (%ebx é salvo e recuperado)
+#   %edi  %eax  (%ebx é salvo e recuperado - não altera)
 pular:
   popl return_addJ
-  pushl $Jumped
-  call printf
-  addl $4, %esp
 
   popl %edi
-  pushl %ebx  # guarda o conteúdo de ebx, caso tenha algo importante
+  pushl %ebx
 
+  movl %ebx, %eax
   movl $4, %ebx
-  mull %ebx   # faz eax * 4
+  mull %ebx   # faz eax * 4 (%ebx * 4)
+
   addl %eax, %edi
 
   popl %ebx
   pushl %edi
-
-  pushl $Jumped
-  call printf
-  addl $4, %esp
 
   pushl return_addJ
 ret
@@ -269,7 +264,7 @@ ret
 #   Endereço do primeiro elemento da matriz em %edi
 #   Ordem da matriz em %ebx
 # Pós-Condição:
-#   O determinante da matriz somado à variável det
+#   O determinante da matriz somado à variável det_valor
 # Registradores Alterados:
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
@@ -303,34 +298,52 @@ pular_segunda_linha:
 
 
 # Pré-Condição:
-#   Ordem da matriz principal está em %eax
-#   Coluna fixa está em %ebx
+#   Ordem da matriz principal está em %ebx
+#   Coluna fixa está em indice_fcol
 #   Endereço da matriz auxiliar está em %esi
 #   Endereço da matriz principal está em %edi
 # Pós-Condição:
 #   A submatriz (desconsiderando a coluna %ebx e a primeira linha) de %edi em %esi
 # Registradores Alterados:
-#   %ebx  %ecx  %edx
+#   %eax %ebx %ecx %edx %edi (%esi é recalculado - não altera)
 submatriz:
   # Avança para a segunda linha
-  pushl %eax # pular altera o eax
   pushl %edi
-  incl %eax
-  call pular # avança N+1 campos (considera a resposta), ou seja, vai para [1][0] - 1º elemento da segunda linha da MP
-  popl %edi
+  # incl %ebx
+  call pular # avança N campos, ou seja, vai para [1][0] - 1º elemento da segunda linha da MP
+  popl %edi # contém o endereço da segunda linha
+  # decl %ebx
 
-  popl %eax # recupera a ordem da matriz principal
-  pushl %eax
-  # Calcula a quantidade de elementos da matriz principal, exceto a primeira linha
-  mull %eax # (%eax x %eax)
+# Calcula a quantidade de elementos da matriz principal, exceto a primeira linha
+  movl %ebx, %eax
+  mull %eax # (%eax x %eax = %ebx x %ebx)
   movl %eax, %ecx # move para %ecx
-  popl %eax # ¨%eax recebe a ordem da matriz novamente
-  subl %ecx, %eax # (%ecx <- %ecx - %eax) - assim temos nxn - n
+  subl %ebx, %ecx # (%ecx <- %ecx - %eax) - assim temos nxn - n
 
+  movl $0, %eax # %eax acompanha a coluna
   loop_submatriz:
-    # verifica se acabou o loop
-#    cmpl
+    incl %eax
+    cmpl %eax, indice_fcol # compara se a coluna atual deve ser copiada ou não
+    je final_laco_submatriz
 
+    movl  (%edi), %edx
+    movl  %edx, (%esi) # copia o elemento para a posição atual em %esi
+    addl $4, %esi # move para o proximo espaço em %esi
+
+    final_laco_submatriz:
+      addl $4, %edi # move para o proximo espaço em %edi
+      cmpl %eax, %ebx  # chegou na última coluna
+      jne pular_reset_eax
+      movl $0, %eax
+      pular_reset_eax:
+      loop loop_submatriz
+
+  # retorna %esi para o valor original
+  decl %ebx # n-1
+  movl %ebx, %eax
+  mull %eax # (n-1 x n-1)
+  addl $4, %eax # último add não considerado
+  subl %eax, %esi # move para o proximo espaço em %esi
 ret
 
 
@@ -399,10 +412,17 @@ _start:
   movl %edi, matriz_aux
   movl matriz_aux, %esi
 
-  call gerar_matriz_sem_z
+# call gerar_matriz_sem_z
 
 #  movl matriz_aux, %edi
-#  call mostrar_matriz
+
+  movl $2, indice_fcol
+  movl N, %ebx
+  movl matriz, %edi
+  call submatriz
+
+  movl matriz_aux, %edi
+  call mostrar_matriz
 
 fim:
   pushl $mensagemTchau

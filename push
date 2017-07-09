@@ -1,3 +1,6 @@
-git add *
-git commit -a -m \'$1\'
-git push upstream
+#!/bin/bash
+read -p "Commit description: " desc
+git add . && \
+git add -u && \
+git commit -m "$desc" && \
+echo git push upstream
