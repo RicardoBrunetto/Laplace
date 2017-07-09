@@ -18,9 +18,9 @@ pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
 # mostrar_elemdois:   .asciz  "\nMostrarElem: %d\t\n"
 # mostrar_reg:   .asciz  "\nMostrarReg: %X\t\n"
 
-double:   .asciz  "\nOPA: %d\t%d\n"
+# double:   .asciz  "\nOPA: %d\t%d\n"
 
-inserido:   .asciz  "\nTHIS ONE: %d\n"
+# inserido:   .asciz  "\nTHIS ONE: %d\n"
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
@@ -40,6 +40,8 @@ return_add1:  .int      0
 return_add2:  .int      0
 return_add3:  .int      0
 return_addJ:  .int      0
+
+menosumelevadoaimaisjota: .int 0
 
 .section .text
 
@@ -298,6 +300,23 @@ pular_segunda_linha:
 
 
 # Pré-Condição:
+#   Coluna fixa está em indice_fcol
+# Pós-Condição:
+#   A constante que multiplica o cofator (-1)^(linha + coluna) está em %eax
+# Registradores Alterados:
+#   %eax
+sinal_cofator:
+  movl indice_fcol, %eax
+  andl $1, %eax
+  cmpl $1, %eax
+  jz notpar
+    movl $-1, %eax
+    ret
+  notpar:
+    movl $1, %eax
+ret
+
+# Pré-Condição:
 #   Ordem da matriz principal está em %ebx
 #   Coluna fixa está em indice_fcol
 #   Endereço da matriz auxiliar está em %esi
@@ -398,6 +417,9 @@ _start:
   call msg_inicial
   call ler_n
 
+  movl $5, indice_fcol
+  call sinal_cofator
+
   movl N, %eax
   movl N, %ebx
   incl %ebx
@@ -416,7 +438,7 @@ _start:
 
 #  movl matriz_aux, %edi
 
-  movl $2, indice_fcol
+  movl $1, indice_fcol
   movl N, %ebx
   movl matriz, %edi
   call submatriz
