@@ -9,6 +9,8 @@ divisoria:            .asciz    "\n---------------------------------------------
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
 input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*xn + ... + c2*x2 + c1*x1 = res_xn\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada xi\t\t*%s"
 
+jumped: .asciz  "Jumped: %X\n"
+
 pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
 
 pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
@@ -20,6 +22,7 @@ mostrar_reg:   .asciz  "\nMostrarReg: %X\t\n"
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
+formatoPtr:  .asciz  "#%d: PONTEIROS: %X\t%X\n"
 formatoChar:    .asciz  "%c"
 formatoNum:     .asciz  "%d"
 pulaLinha:      .asciz  "\n"
@@ -66,7 +69,12 @@ matricial_linear:
    pushl return_add3
 ret
 
-# Avança para o proximo campo (4 bytes) de %edi
+# Pré-Condição:
+#   Endereço de memória no topo da pilha
+# Pós-Condição:
+#   Avança 4 bytes em %edi (%edi = %edi + 4) e o empilha
+# Registradores Alterados:
+#   %edi
 proximo_campo:
   popl return_addJ
 
@@ -77,9 +85,18 @@ proximo_campo:
   pushl return_addJ
 ret
 
-# Avança %eax campos (é como se fosse um proximo_campo de %eax loops)
+# Pré-Condição:
+#   Endereço de memória no topo da pilha
+#   Quantidade de bytes em %eax
+# Pós-Condição:
+#   Avança %eax bytes em %edi (%edi = %edi + 4x%eax) e o empilha
+# Registradores Alterados:
+#   %edi  %eax  (%ebx é salvo e recuperado)
 pular:
   popl return_addJ
+  pushl $Jumped
+  call printf
+  addl $4, %esp
 
   popl %edi
   pushl %ebx  # guarda o conteúdo de ebx, caso tenha algo importante
@@ -90,6 +107,10 @@ pular:
 
   popl %ebx
   pushl %edi
+
+  pushl $Jumped
+  call printf
+  addl $4, %esp
 
   pushl return_addJ
 ret
@@ -105,44 +126,12 @@ ler_n:
   addl $8, %esp
 ret
 
-# Supoe que o bloco de memória está em %edi
-ler_equacao:
-  popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
-  movl N, %ecx
-
-  loop_ler_equacao:
-    movl %ecx, contadorEq # faz backup do valor de ecx (contador)
-
-    pushl contadorEq
-    pushl $pedirXn
-    call printf
-    addl $8, %esp
-
-    # %edi está na pilha
-    pushl $formatoNum
-    call scanf
-    addl $4, %esp
-
-    call proximo_campo
-
-    movl contadorEq, %ecx
-    loop loop_ler_equacao
-
-    # Acabaram os coeficientes de xn. Pede o resultado da equação.
-    pushl contadorLn
-    pushl $pedirRes
-    call printf
-    addl $8, %esp
-
-    pushl $formatoNum
-    call scanf
-    addl $4, %esp
-
-    call proximo_campo # deixa %edi pronto para a proxima linha
-
-  pushl return_add2
-ret
-
+# Pré-Condição:
+#   Endereço da matriz principal em %edi
+# Pós-Condição:
+#   Preenche a matriz %edi (N x N+1)
+# Registradores Alterados:
+#   %edi  %ecx
 ler_dados:
   popl return_add1 # guarda o endereço de retorno
   movl matriz, %edi # coloca o endereço inicial da matriz em %edi
@@ -163,10 +152,47 @@ ler_dados:
     loop loop_ler_dados
 
     pushl return_add1 # empilha o endereço de retorno
+    ret
+    # Supoe que o bloco de memória está em %edi
+    ler_equacao:
+      popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
+      movl N, %ecx
+
+      loop_ler_equacao:
+        movl %ecx, contadorEq # faz backup do valor de ecx (contador)
+
+        pushl contadorEq
+        pushl $pedirXn
+        call printf
+        addl $8, %esp
+
+        # %edi está na pilha
+        pushl $formatoNum
+        call scanf
+        addl $4, %esp
+
+        call proximo_campo
+
+        movl contadorEq, %ecx
+        loop loop_ler_equacao
+
+        # Acabaram os coeficientes de xn. Pede o resultado da equação.
+        pushl contadorLn
+        pushl $pedirRes
+        call printf
+        addl $8, %esp
+
+        pushl $formatoNum
+        call scanf
+        addl $4, %esp
+
+        call proximo_campo # deixa %edi pronto para a proxima linha
+
+      pushl return_add2
 ret
 
 # Pré-Condição:
-#   Ordem da matriz está em %eax (linhas) e %eax (colunas)
+#   Ordem da matriz está em %eax (linhas) e %ebx (colunas)
 # Pós-Condição:
 #   Endereço do primeiro elemento da nova matriz em %edi
 # Registradores Alterados:
@@ -178,8 +204,8 @@ alocar_matriz:
 
   movl %eax, %ecx
   pushl %ecx
-  call malloc # automaticamente desempilha %ecx
-  addl $4, %esp
+  call malloc
+  addl $4, %esp # desempilha %ecx
   movl %eax, %edi
 ret
 
@@ -197,6 +223,7 @@ mostrar_matriz:
   addl $8, %esp
 
   popl return_add1 # guarda o endereço de retorno
+  addl $8, %esp
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
   loop_mostrar_matriz:
@@ -225,13 +252,12 @@ mostrar_matriz:
       loop_mostrar_linha:
         movl %ecx, contadorEq # faz backup do valor de ecx (contador)
 
-        # %edi está na pilha
         pushl (%edi)
         pushl $mostrar_elem
         call printf
         addl $8, %esp
 
-        call proximo_campo
+        addl $4, %edi
 
         movl contadorEq, %ecx
         loop loop_mostrar_linha
@@ -239,8 +265,13 @@ mostrar_matriz:
         pushl return_add2
 ret
 
-
-# Calcula o determinante da matriz cujo endereço está em %edi e a ordem em %ebx
+# Pré-Condição:
+#   Endereço do primeiro elemento da matriz em %edi
+#   Ordem da matriz em %ebx
+# Pós-Condição:
+#   O determinante da matriz somado à variável det
+# Registradores Alterados:
+#   %eax %ebx %ecx %edx %edi %esi
 determinante:
   cmpl $1, %ebx
   je ordem_1
@@ -255,9 +286,9 @@ ordem_maior_igual_3:
   mull %ecx
   mull %ecx # 4x(N-1 x N-1)
 
-  pushl %eax
-  call malloc
-  movl %eax, matriz_aux # aloca a matriz auxiliar de dimensão N-1 por N-1
+  # pushl %eax
+  # call malloc
+  # movl %eax, matriz_aux # aloca a matriz auxiliar de dimensão N-1 por N-1
   addl $4, %esp
 
   movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz principal [MP]
@@ -277,10 +308,10 @@ pular_segunda_linha:
 #   Endereço da matriz auxiliar está em %esi
 #   Endereço da matriz principal está em %edi
 # Pós-Condição:
-#   Matriz de cofatores em %esi
+#   A submatriz (desconsiderando a coluna %ebx e a primeira linha) de %edi em %esi
 # Registradores Alterados:
 #   %ebx  %ecx  %edx
-matriz_cofator:
+submatriz:
   # Avança para a segunda linha
   pushl %eax # pular altera o eax
   pushl %edi
@@ -296,9 +327,7 @@ matriz_cofator:
   popl %eax # ¨%eax recebe a ordem da matriz novamente
   subl %ecx, %eax # (%ecx <- %ecx - %eax) - assim temos nxn - n
 
-
-
-  loop_matriz_cofator:
+  loop_submatriz:
     # verifica se acabou o loop
 #    cmpl
 
@@ -309,20 +338,23 @@ ordem_1:
 
 ordem_2:
 
+
+
+
 # Pré-Condição:
 #   Endereço da matriz auxiliar já alocada está em %esi
 # Pós-Condição:
 #   Matriz sem a última coluna está em %esi
 # Registradores Alterados:
-#   %edi %ecx %ebx
+#   %edi %esi %ecx
 gerar_matriz_sem_z:
-  popl return_add1 # guarda o endereço de retorno
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
+  movl matriz, %edi # move o endereço da matriz principal para %edi
 
   loop_gerar_matriz_sem_z:
     movl %ecx, contadorLn # faz backup do valor de ecx (contador)
 
-    call mostrar_linha
+    call linha_gerar_matriz_sem_z
 
     # %edi estará em um elemnto [k][N] e deve-se pular o elemento [k][N+1]
     addl $4, %edi # pula para o proximmo elemento de %edi
@@ -330,36 +362,22 @@ gerar_matriz_sem_z:
     movl contadorLn, %ecx
     loop loop_gerar_matriz_sem_z
 
-    pushl return_add1 # empilha o endereço de retorno
     ret
-    gerar_matriz_sem_z_loop_interno:
-      popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
+    linha_gerar_matriz_sem_z:
       movl N, %ecx
 
-      loop_mostrar_linha:
+      loop_linha_gerar_matriz_sem_z:
         movl %ecx, contadorEq # faz backup do valor de ecx (contador)
 
-        movl (%edi), %esi # copia o elemento para a posição atual em %esi
+        movl  (%edi), %eax
+        movl  %eax, (%esi) # copia o elemento para a posição atual em %esi
+
         addl $4, %esi # move para o proximo espaço em %esi
         addl $4, %edi # move para o proximo espaço em %edi
 
         movl contadorEq, %ecx
-        loop loop_gerar_matriz_sem_z_loop_interno
-
-        pushl return_add2
+        loop loop_linha_gerar_matriz_sem_z
 ret
-
-
-
-
-
-
-
-
-
-
-
-
 
 .globl _start
 
@@ -370,20 +388,21 @@ _start:
   movl N, %eax
   movl N, %ebx
   incl %ebx
-
   call alocar_matriz
-
   movl %edi, matriz
 
   call ler_dados
 
-  movl matriz, %edi # coloca o endereço inicial da matriz em %edi
-  pushl %edi # coloca %edi na pilha
+  movl N, %eax
+  movl N, %ebx
+  call alocar_matriz
+  movl %edi, matriz_aux
+  movl matriz_aux, %esi
 
-  # call pular_segunda_linha
+  call gerar_matriz_sem_z
 
-  call mostrar_matriz
-
+#  movl matriz_aux, %edi
+#  call mostrar_matriz
 
 fim:
   pushl $mensagemTchau
