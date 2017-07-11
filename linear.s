@@ -8,10 +8,13 @@ mostrarResultado:      .asciz    "\nResultado: %d\n"
 
 
 espec:   .asciz   "\nEAX:%d\tEBX:%d\tDET:%d\n"
-
+desalocado: .asciz  "\nDESALOCADO!\n"
 espec2:   .asciz   "\nESI:%d\tEDI:%d\n"
-ediony:   .asciz   "\ntEDI:%d\n"
+edionly:   .asciz   "\ntEDI:%d\n"
+addr:   .asciz   "\ntADDR: %X\n"
 espec3:   .asciz   "\nECX:%d\tEBX:%d\n"
+
+cof:    .asciz  "\nCOL: %d\n"
 
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
@@ -299,68 +302,83 @@ determinante:
     movl %ecx, %eax
     movl %ecx, %ebx
     call alocar_matriz
-    movl %edi, matriz_aux
+
     movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz auxiliar (n-1 x n-1)
 
     movl $0, %ecx # Quantidade de colunas a serem fixadas
 
     loop_ordem_maior_igual_3:
-        incl %ecx
-        movl %ecx, indice_fcol
+      incl %ecx
+      movl %ecx, indice_fcol
 
-        movl (%esp), %ebx # recoloca a ordem da matriz atual em %ebx
-        movl 4(%esp), %edi # %edi volta a ter o endereço da matriz atual
-        pushl det_valor
-        movl $0, det_valor
-        pushl %ecx # salva a coluna fixada
+      movl (%esp), %ebx # recoloca a ordem da matriz atual em %ebx
+      movl 4(%esp), %edi # %edi volta a ter o endereço da matriz atual
 
-        call submatriz # encontra a submatriz
+      pushl det_valor
+      movl $0, det_valor
 
-        movl %esi, %edi # Agora %edi é a submatriz
-        decl %ebx # %ebx contém a ordem da submatriz (sempre n-1)
+      pushl %ecx # salva a coluna fixada
+      call submatriz # encontra a submatriz
 
-        call determinante # calcula o determinante da submatriz
+      movl %esi, %edi # Agora %edi é a submatriz
 
-        popl indice_fcol
-        call sinal_cofator # diz por quanto o determinante deve ser multiplicado com base na coluna fixada
+      pushl %ecx
+      popl %ecx
 
-        pushl %edx
-        movl  12(%esp), %edx # recupera %edi sem tirar da pilha
+      decl %ebx # %ebx contém a ordem da submatriz (sempre n-1)
 
-        pushl %ecx
-        pushl %eax # Guarda o valor recém cálculado
+      pushl %edi # empilha a matriz auxiliar atual
 
-        movl indice_fcol, %ecx
-        movl $4, %eax
-        decl %ecx # indice_fcol-1
-        pushl %edx # multiplicar altera o edx
-        mull %ecx # 4*(indice_fcol-1)
-        popl %edx
+      call determinante # calcula o determinante da submatriz
 
-        addl %eax, %edx # desloca 4*(indice_fcol-1) bytes para obter o elemento fixado
-        movl (%edx), %edx # transfere para edx o próprio valor (elemento de posição [1]x[indice_fcol])
+      popl %esi # obtém a matriz auxiliar da outra iteração (para desalocar)
+      popl indice_fcol # antigo %ecx (contador da coluna) estava no topo
+      call sinal_cofator # diz por quanto o determinante deve ser multiplicado com base na coluna fixada
 
-        popl %eax # Recupera o sinal do cofator
-        imull %edx # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol]
-        popl %ecx # Recupera o valor da coluna fixada
-        popl %edx # Recupera o valor de edx
-        imull det_valor # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol] * det_valor (TEOREMA DE LAPLACE)
+      pushl %edx # guarda %edx
+      movl  12(%esp), %edx # recupera %edi sem tirar da pilha
 
-        # o valor antigo do determinante está no topo da pilha
-        popl %edx
-        addl %eax, %edx
-        movl %edx, det_valor # soma o determinante antigo com o atual
+      pushl %ecx
+      pushl %eax # Guarda o valor recém cálculado
 
-        # verifica a quantidade de colunas ainda restantes a serem fixadas
-        movl indice_fcol, %ecx
-        popl %ebx # recupera a ordem da matriz
-        pushl %ebx
+      movl indice_fcol, %ecx
+      movl $4, %eax
+      decl %ecx # indice_fcol-1
+      pushl %edx # multiplicar altera o edx
+      mull %ecx # 4*(indice_fcol-1)
+      popl %edx
 
-        cmpl %ecx, %ebx
-        jnz loop_ordem_maior_igual_3
-        popl %ebx
-        popl %edi
-        jmp fim_calculo_det
+      addl %eax, %edx # desloca 4*(indice_fcol-1) bytes para obter o elemento fixado
+      movl (%edx), %edx # transfere para edx o próprio valor (elemento de posição [1]x[indice_fcol])
+
+      popl %eax # Recupera o sinal do cofator
+      imull %edx # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol]
+
+      popl %ecx # Recupera o valor da coluna fixada
+      popl %edx # Recupera o valor de %edx
+      imull det_valor # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol] * det_valor (TEOREMA DE LAPLACE)
+
+      # o valor antigo do determinante está no topo da pilha
+      popl %edx
+      addl %eax, %edx
+      movl %edx, det_valor # soma o determinante antigo com o atual
+
+      # verifica a quantidade de colunas ainda restantes a serem fixadas
+      movl indice_fcol, %ecx
+      popl %ebx # recupera a ordem da matriz
+      pushl %ebx
+
+      cmpl %ecx, %ebx
+    jnz loop_ordem_maior_igual_3
+
+      popl %ebx
+      popl %edi
+
+      pushl %esi # %esi tem o endereço que foi alocado para a matriz auxiliar
+  		call free
+  		addl $4, %esp
+
+    jmp fim_calculo_det
     # loop loop_ordem_maior_igual_3
 
 # 4 5 6 9 2 98 8 5 2 4 98 1 2 4 7 98 7 8 9 3 98
@@ -528,14 +546,13 @@ _start:
   movl %edi, matriz
 
   call ler_dados
-
   movl N, %eax
   movl N, %ebx
   call alocar_matriz
   movl %edi, matriz_aux
-#  movl matriz_aux, %esi
+  movl matriz_aux, %esi
 
-#  call gerar_matriz_sem_z
+  call gerar_matriz_sem_z
 
   movl matriz_aux, %edi
   movl N, %ebx
@@ -544,15 +561,16 @@ _start:
   pushl det_valor
   pushl $mostrarResultado
   call printf
+  addl $8, %esp
 
-#  movl $1, indice_fcol
-#  movl N, %ebx
-# pushl indice_fcol
-#  movl matriz, %edi
-#  call submatriz
+  #  movl $1, indice_fcol
+  #  movl N, %ebx
+  # pushl indice_fcol
+  #  movl matriz, %edi
+  #  call submatriz
 
-#  movl %esi, %edi
-#  call mostrar_matriz
+  #  movl %esi, %edi
+  #  call mostrar_matriz
 
 fim:
   pushl $mensagemTchau

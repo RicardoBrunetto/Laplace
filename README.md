@@ -3,11 +3,13 @@
 Implementação em Assembly de um resolutor de sistemas lineares de N equações com N variáveis através dos teoremas de Cramer e Laplace.
 
 - [x] Entrada
-- [ ] Cálculo do determinante (Laplace)
+- [x] Cálculo do determinante (Laplace)
   - [x] Gerar matriz sem a última coluna (coeficientes)
   - [x] Gerar submatriz (cofator Aij)
   - [x] Cálculo do sinal de cofator
-  - [ ] Cálculo de Laplace
-    - [ ] Lógica para calcular o determinante parcialmente
+  - [x] Cálculo de Laplace
+    - [x] Lógica para calcular o determinante parcialmente
+- [ ] Principal
+  - [ ] Sequência correta dependendo da ordem
 - [ ] Inversão de colunas
 - [ ] Regra de Cramer
