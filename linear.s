@@ -5,6 +5,7 @@ mensagemTchau:        .asciz    "\nTchau Tchau!\n"
 mensagemMostrar:      .asciz    "\tMatriz atual:\n"
 
 mostrarResultado:      .asciz    "\nResultado: %d\n"
+mostrarResultado_D:      .asciz    "\nResultado_D: %d\n"
 
 addr:      .asciz    "\nADDR: %x\n"
 
@@ -34,6 +35,9 @@ indice_fcol:  .int      0
 det_valor:    .int      0
 
 det_D:        .int      0
+
+contador_Cramer:  .int  0
+atual_index:      .int  0
 
 return_add1:  .int      0
 return_add2:  .int      0
@@ -373,22 +377,6 @@ determinante:
   		call free
   		addl $4, %esp
 
-      pushl %eax
-      pushl %ebx
-      pushl %ecx
-      pushl %edx
-
-      pushl %esi
-      pushl $addr
-      call printf
-      addl $8, %esp
-
-      popl %edx
-      popl %ecx
-      popl %ebx
-      popl %eax
-
-
     jmp fim_calculo_det
 
     # Para matrizes de ordem 1
@@ -419,6 +407,7 @@ determinante:
 
       addl %eax, det_valor
 fim_calculo_det:
+
 ret
 
 # Pré-Condição:
@@ -583,26 +572,68 @@ ret
 # Registradores Alterados:
 #   (%edi, %esi, %ebx, %ecx e %eax são salvos - não alteram)
 resolver_sistema:
+  movl $1, atual_index
+  movl N, %ecx
 
-  movl N, %eax
-  movl N, %ebx
-  call alocar_matriz
-  movl %edi, matriz_aux
-  movl matriz_aux, %esi
+  loop_resolver_sistema:
+    movl %ecx, contador_Cramer
+    movl N, %eax
+    movl N, %ebx
+    call alocar_matriz
+    movl %edi, matriz_aux
+    movl matriz_aux, %esi
 
-  call gerar_matriz_sem_z
+    call gerar_matriz_sem_z
+    jmp break
 
-  movl matriz_aux, %esi
-  movl matriz, %edi
-  movl $1, %ebx
-  call copiar_ultima_coluna
+    pt2:
+    movl contador_Cramer, %ecx
+    loop loop_resolver_sistema
+    jmp fim_resolver_sistema
+    break:
 
-  movl matriz_aux, %edi
-  call mostrar_matriz
+    movl matriz_aux, %esi
+    movl matriz, %edi
+    movl atual_index, %ebx
+    call copiar_ultima_coluna
+    incl %ebx
+    movl %ebx, atual_index
+    # calcular o determinante da matriz com a coluna %ebx subsituída pela última coluna da MP
+    movl matriz_aux, %edi
+    movl N, %ebx
 
-  movl matriz, %edi
-  call mostrar_matriz
+    movl $0, det_valor
 
+    call determinante
+
+
+# CAGADO
+# CAGADO
+# CAGADO
+
+    movl det_D, %eax
+    idivl det_valor
+
+
+    pushl %eax
+    pushl %ebx
+    pushl %ecx
+    pushl %edx
+
+    pushl %edx
+    pushl $mostrarResultado
+    call printf
+    addl $8, %esp
+
+    popl %edx
+    popl %ecx
+    popl %ebx
+    popl %eax
+
+
+
+    jmp pt2
+    fim_resolver_sistema:
 ret
 
 .globl _start
@@ -641,11 +672,8 @@ _start:
   movl det_valor, %eax
   movl %eax, det_D    # guarda o determinante da matriz principal
 
-  pushl %esi
-  pushl $addr
-  call printf
-  addl $8, %esp
-#   call resolver_sistema
+  call resolver_sistema
+  jmp fim
 
 #  movl N, %ebx
 #  call determinante

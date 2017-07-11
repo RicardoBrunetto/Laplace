@@ -20,8 +20,24 @@ pushl %ebx
 pushl %ecx
 pushl %edx
 
+pushl det_valor
+pushl $mostrarResultado
+call printf
+addl $8, %esp
 
 popl %edx
 popl %ecx
 popl %ebx
 popl %eax
+
+    pushl %edi
+    pushl %ebx
+    call mostrar_matriz
+    popl %ebx
+    popl %edi
+
+
+        pushl det_valor
+        pushl $mostrarResultado
+        call printf
+        addl $8, %esp
