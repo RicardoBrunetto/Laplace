@@ -10,6 +10,8 @@ mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
 spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
 
+executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\n"
+
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
@@ -20,6 +22,8 @@ pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
 pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
 pedirXn:    .asciz    "\nInforme o coeficiente de x%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
+
+limpabuf: .string "%*c"
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
@@ -44,6 +48,7 @@ return_add1:  .int      0
 return_add2:  .int      0
 return_add3:  .int      0
 return_addJ:  .int      0
+resp:         .int      0
 
 .section .text
 
@@ -640,6 +645,11 @@ ret
 
 _start:
   call msg_inicial
+  jmp inicio_resolucao
+
+# Inicia o procedimento
+inicio_resolucao:
+  movl $0, det_valor
   call ler_n
 
   movl N, %eax
@@ -660,6 +670,7 @@ _start:
 
   movl matriz_aux, %edi
   movl N, %ebx
+
   call determinante
 
   movl det_valor, %eax
@@ -701,6 +712,16 @@ resolver_sitema_ordem1:
   call determinante
 
 fim:
+  pushl $executar_Novamente
+  call printf
+  pushl $limpabuf
+  call scanf
+  addl $8, %esp
+
+  call getchar
+  cmpl $'s', %eax
+  jz inicio_resolucao
+
   pushl $mensagemTchau
   call printf
   addl $4, %esp

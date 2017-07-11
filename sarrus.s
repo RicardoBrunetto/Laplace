@@ -1,6 +1,6 @@
 .section .data
 
-mensagemInicial:      .asciz    "%s* Trabalho 02 - Resolutor de Sistemas Lineares de N variáveis \t*%s"
+mensagemInicial:      .asciz    "%s* Trabalho 01 - Resolutor de Sistemas Lineares de 3 variáveis \t*%s"
 mensagemTchau:        .asciz    "\nTchau Tchau!\n"
 mensagemMostrar:      .asciz    "\tMatriz atual:\n"
 
@@ -9,6 +9,8 @@ mostrarResultado:     .asciz    "\nDeterminante Dx%d: %d"
 mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
 spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
+
+executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\n"
 
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
@@ -31,7 +33,7 @@ matriz:       .int      0
 matriz_aux:   .int      0
 contadorLn:   .int      0
 contadorEq:   .int      0
-N:            .int      0
+N:            .int      3
 indice_fcol:  .int      0
 det_valor:    .int      0
 
@@ -44,6 +46,7 @@ return_add1:  .int      0
 return_add2:  .int      0
 return_add3:  .int      0
 return_addJ:  .int      0
+resp:         .int      0
 
 .section .text
 
@@ -116,17 +119,6 @@ pular:
   pushl %edi
 
   pushl return_addJ
-ret
-
-ler_n:
-  pushl $pedirN
-  call printf
-  addl $4, %esp
-
-  pushl $N
-  pushl $formatoNum
-  call scanf
-  addl $8, %esp
 ret
 
 # Pré-Condição:
@@ -415,79 +407,6 @@ fim_calculo_det:
 
 ret
 
-# Pré-Condição:
-#   Coluna fixa está em indice_fcol
-# Pós-Condição:
-#   A constante que multiplica o cofator (-1)^(linha + coluna) está em %eax
-# Registradores Alterados:
-#   %eax
-sinal_cofator:
-  movl indice_fcol, %eax
-  andl $1, %eax
-  cmpl $1, %eax
-  jz notpar
-    movl $-1, %eax
-    ret
-  notpar:
-    movl $1, %eax
-ret
-
-# Pré-Condição:
-#   Ordem da matriz principal está em %ebx
-#   Coluna fixa está no topo da pilha
-#   Endereço da matriz auxiliar está em %esi
-#   Endereço da matriz principal está em %edi
-# Pós-Condição:
-#   A submatriz (desconsiderando a coluna %ebx e a primeira linha) de %edi em %esi
-# Registradores Alterados:
-#   %eax %ecx %edx %edi (%esi e %ebx são recalculados - não alteram)
-submatriz:
-  # A coluna fixa vai para indice_fcol
-  movl 4(%esp), %eax
-  movl %eax, indice_fcol
-  # Avança para a segunda linha
-  pushl %edi
-  # incl %ebx
-  call pular # avança N campos, ou seja, vai para [1][0] - 1º elemento da segunda linha da MP
-  popl %edi # contém o endereço da segunda linha
-  # decl %ebx
-
-# Calcula a quantidade de elementos da matriz principal, exceto a primeira linha
-  movl %ebx, %eax
-  mull %eax # (%eax x %eax = %ebx x %ebx)
-  movl %eax, %ecx # move para %ecx
-  subl %ebx, %ecx # (%ecx <- %ecx - %eax) - assim temos nxn - n
-
-  movl $0, %eax # %eax acompanha a coluna
-  loop_submatriz:
-    incl %eax
-    cmpl %eax, indice_fcol # compara se a coluna atual deve ser copiada ou não
-    je final_laco_submatriz
-
-    movl  (%edi), %edx
-    movl  %edx, (%esi) # copia o elemento para a posição atual em %esi
-    addl $4, %esi # move para o proximo espaço em %esi
-
-    final_laco_submatriz:
-      addl $4, %edi # move para o proximo espaço em %edi
-      cmpl %eax, %ebx  # chegou na última coluna
-      jne pular_reset_eax
-      movl $0, %eax
-      pular_reset_eax:
-      loop loop_submatriz
-
-  # retorna %esi para o valor original
-  decl %ebx # n-1
-  movl %ebx, %eax
-  incl %ebx # retorna %ebx para o valor original
-  mull %eax # (n-1 x n-1)
-  pushl %ebx
-  movl $4, %ebx
-  mull %ebx
-  popl %ebx
-  # addl $4, %eax # último add não considerado
-  subl %eax, %esi # move para o proximo espaço em %esi
-ret
 
 # Pré-Condição:
 #   Endereço da matriz auxiliar já alocada está em %esi
@@ -640,8 +559,8 @@ ret
 
 _start:
   call msg_inicial
-  call ler_n
 
+inicio_resolucao:
   movl N, %eax
   movl N, %ebx
   incl %ebx
@@ -701,6 +620,14 @@ resolver_sitema_ordem1:
   call determinante
 
 fim:
+  pushl $executar_Novamente
+  pushl $resp
+  pushl $formatoNum
+  call scanf
+  addl $12, %esp
+  cmpl $'s', resp
+  je inicio_resolucao
+
   pushl $mensagemTchau
   call printf
   addl $4, %esp
