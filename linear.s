@@ -3,9 +3,10 @@
 mensagemInicial:      .asciz    "%s* Trabalho 02 - Resolutor de Sistemas Lineares de N variáveis \t*%s"
 mensagemTchau:        .asciz    "\nTchau Tchau!\n"
 mensagemMostrar:      .asciz    "\tMatriz atual:\n"
+mensagemSistema:      .asciz    "\tSistema Linear:\n"
 
-mostrarX_i:           .asciz    "\n\t=>\tx%d = %d\n"
-mostrarResultado:     .asciz    "\nDeterminante Dx%d: %d"
+mostrarX_i:           .asciz    "\n\t=>\tx_%d = %d\n"
+mostrarResultado:     .asciz    "\nDeterminante Dx_%d: %d"
 mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
 spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
@@ -15,15 +16,18 @@ executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
-input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*xn + ... + c2*x2 + c1*x1 = res_xn\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada xi\t\t*%s"
+input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*x_n + ... + c2*x_2 + c1*x_1 = res_n\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada x_i\t\t*%s"
 
 pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
 
 pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
-pedirXn:    .asciz    "\nInforme o coeficiente de x%d: "
+pedirXn:    .asciz    "\nInforme o coeficiente de x_%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
 
-limpabuf: .string "%*c"
+limpabuf:       .string   "%*c"
+mostrar_coef:   .asciz    "%dx_%d %s"
+plus_signal:    .asciz    "+ "
+eq_signal:      .asciz    "= "
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
@@ -216,6 +220,95 @@ alocar_matriz:
   addl $4, %esp # desempilha %ecx
   movl %eax, %edi
 ret
+
+
+# Pré-Condição:
+#   Endereço do primeiro elemento da matriz em %edi
+# Pós-Condição:
+#   Mostra o sistema linear na tela
+# Registradores Alterados:
+#   %ecx  %edi
+mostrar_sistema:
+  pushl $divisoria
+  call printf
+  pushl $mensagemSistema
+  call printf
+  addl $8, %esp
+
+  popl return_add1 # guarda o endereço de retorno
+  # addl $8, %esp
+  movl N, %ecx # quantidade de vezes que o loop_dados vai executar
+
+  loop_mostrar_sistema:
+    movl %ecx, contadorLn # faz backup do valor de ecx (contador)
+
+    push $pulaLinha
+    call printf
+    addl $4, %esp
+
+    call mostrar_equacao
+
+    movl contadorLn, %ecx
+    loop loop_mostrar_sistema
+
+    pushl $divisoria
+    call printf
+    addl $4, %esp
+    pushl return_add1 # empilha o endereço de retorno
+    ret
+
+    mostrar_equacao:
+      popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
+      movl N, %ecx
+      incl %ecx # mostrar os n+1 inteiros
+
+      loop_mostrar_equacao:
+        movl %ecx, contadorEq # faz backup do valor de ecx (contador)
+
+        pushl %eax
+        pushl %ebx
+        pushl %ecx
+        pushl %edx
+
+        cmpl $1, %ecx
+        je printar_result
+        cmpl $2, %ecx
+        je printar_ultimo_coef
+
+        printar_coef:
+          pushl $plus_signal
+          jmp sequencia_print
+        printar_ultimo_coef:
+          pushl $eq_signal
+          jmp sequencia_print
+        printar_result:
+          pushl (%edi)
+          pushl $mostrar_elem
+          call printf
+          addl $8, %esp
+          jmp fim_print
+        sequencia_print:
+          decl %ecx
+          pushl %ecx
+          pushl (%edi)
+          pushl $mostrar_coef
+          call printf
+          addl $16, %esp
+        fim_print:
+
+        popl %edx
+        popl %ecx
+        popl %ebx
+        popl %eax
+
+        addl $4, %edi
+
+        movl contadorEq, %ecx
+        loop loop_mostrar_equacao
+
+        pushl return_add2
+ret
+
 
 # Pré-Condição:
 #   Endereço do primeiro elemento da matriz em %edi
@@ -660,6 +753,13 @@ inicio_resolucao:
 
   call ler_dados
 
+  pushl %edi
+  pushl %ebx
+  movl matriz, %edi
+  call mostrar_sistema
+  popl %ebx
+  popl %edi
+
   movl N, %eax
   movl N, %ebx
   call alocar_matriz
@@ -670,7 +770,6 @@ inicio_resolucao:
 
   movl matriz_aux, %edi
   movl N, %ebx
-
   call determinante
 
   movl det_valor, %eax
