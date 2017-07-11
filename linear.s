@@ -533,9 +533,9 @@ _start:
   movl N, %ebx
   call alocar_matriz
   movl %edi, matriz_aux
-  movl matriz_aux, %esi
+#  movl matriz_aux, %esi
 
-  call gerar_matriz_sem_z
+#  call gerar_matriz_sem_z
 
   movl matriz_aux, %edi
   movl N, %ebx
