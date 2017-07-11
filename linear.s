@@ -6,15 +6,9 @@ mensagemMostrar:      .asciz    "\tMatriz atual:\n"
 
 mostrarResultado:      .asciz    "\nResultado: %d\n"
 
+formatoCopiados:      .asciz    "\nESI: %d\tEDI: %d\n"
 
-espec:   .asciz   "\nEAX:%d\tEBX:%d\tDET:%d\n"
-desalocado: .asciz  "\nDESALOCADO!\n"
-espec2:   .asciz   "\nESI:%d\tEDI:%d\n"
-edionly:   .asciz   "\ntEDI:%d\n"
-addr:   .asciz   "\ntADDR: %X\n"
-espec3:   .asciz   "\nECX:%d\tEBX:%d\n"
-
-cof:    .asciz  "\nCOL: %d\n"
+formatoPulado:      .asciz    "\nVAL: %d\tEAX: %d\n"
 
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
@@ -48,12 +42,12 @@ N:            .int      0
 indice_fcol:  .int      0
 det_valor:    .int      0
 
+det_D:        .int      0
+
 return_add1:  .int      0
 return_add2:  .int      0
 return_add3:  .int      0
 return_addJ:  .int      0
-
-menosumelevadoaimaisjota: .int 0
 
 .section .text
 
@@ -103,7 +97,7 @@ ret
 #   Endereço de memória no topo da pilha
 #   Quantidade de bytes em %ebx
 # Pós-Condição:
-#   Avança %eax bytes em %edi (%edi = %edi + 4x%eax) e o empilha
+#   Avança %ebx bytes em %edi (%edi = %edi + 4x%ebx) e o empilha
 # Registradores Alterados:
 #   %edi  %eax  (%ebx é salvo e recuperado - não altera)
 pular:
@@ -261,10 +255,20 @@ mostrar_matriz:
       loop_mostrar_linha:
         movl %ecx, contadorEq # faz backup do valor de ecx (contador)
 
+        pushl %eax
+        pushl %ebx
+        pushl %ecx
+        pushl %edx
+
         pushl (%edi)
         pushl $mostrar_elem
         call printf
         addl $8, %esp
+
+        popl %edx
+        popl %ecx
+        popl %ebx
+        popl %eax
 
         addl $4, %edi
 
@@ -379,9 +383,6 @@ determinante:
   		addl $4, %esp
 
     jmp fim_calculo_det
-    # loop loop_ordem_maior_igual_3
-
-# 4 5 6 9 2 98 8 5 2 4 98 1 2 4 7 98 7 8 9 3 98
 
     # Para matrizes de ordem 1
     # O valor do determinante é o próprio elemento da matriz
@@ -413,11 +414,6 @@ determinante:
 fim_calculo_det:
 ret
 
-
-apresentar_resultado:
-  # jmp fim
-
-# 3 2 5 5 6 3 5 6 6 9 8 7 7
 # Pré-Condição:
 #   Coluna fixa está em indice_fcol
 # Pós-Condição:
@@ -530,6 +526,58 @@ gerar_matriz_sem_z:
         loop loop_linha_gerar_matriz_sem_z
 ret
 
+# Pré-Condição:
+#   Endereço da matriz auxiliar já alocada está em %esi
+#   Endereço da matriz principal está em %edi
+#   Índice da coluna está em %ebx
+# Pós-Condição:
+#   Matriz de %esi receberá a última coluna de %edi na coluna de índice %ebx
+# Registradores Alterados:
+#   (%edi, %esi, %ebx, %ecx e %eax são salvos - não alteram)
+copiar_ultima_coluna:
+  pushl %ecx # salva %ecx
+  pushl %eax # salva %eax
+  pushl %ebx # salva %ebx
+  pushl %edi # salva a matriz principal
+  pushl %esi # salva a matriz auxiliar
+
+  decl %ebx # os deslocamentos são indexados em 0 enquanto as colunas são indexadas em 1 (deslocar 0 => coluna 1)
+  movl N, %ecx # executará o loop N vezes (são N elementos)
+
+  loop_copiar_ultima_coluna:
+    pushl %edi # guarda a matriz principal
+    pushl %esi # empilha %esi para ser avançado
+    call pular # avança em %ebx-1 elementos (primeira iteração) ou N elementos (demais iterações)
+    popl %esi # %esi recebe a matriz já no elemento correto
+    # %edi com a matriz original está no topo da pilha
+    movl N, %ebx # pula para a última coluna em %edi
+    call pular
+    popl %edi # recupera a matriz principal já avançada
+
+    movl (%edi), %eax # copia o elemento
+    movl %eax, (%esi)
+
+    addl $4, %edi # a matriz principal tem uma linha a mais que deve ser considerada
+  loop loop_copiar_ultima_coluna
+
+  popl %esi # recupera a matriz principal
+  popl %edi # recupera a matriz principal
+  popl %ebx # recupera %ebx
+  popl %eax # recupera %eax
+  popl %ecx # recupera %ecx
+ret
+
+# Pré-Condição:
+#   Endereço da matriz auxiliar já alocada está em %esi
+#   Endereço da matriz principal está em %edi
+#   Índice da coluna está em %ebx
+# Pós-Condição:
+#   Matriz de %esi receberá a última coluna de %edi na coluna de índice %ebx
+# Registradores Alterados:
+#   (%edi, %esi, %ebx, %ecx e %eax são salvos - não alteram)
+calcular_det_
+
+
 .globl _start
 
 _start:
@@ -554,14 +602,24 @@ _start:
 
   call gerar_matriz_sem_z
 
-  movl matriz_aux, %edi
-  movl N, %ebx
-  call determinante
+  movl matriz_aux, %esi
+  movl matriz, %edi
+  movl $1, %ebx
+  call copiar_ultima_coluna
 
-  pushl det_valor
-  pushl $mostrarResultado
-  call printf
-  addl $8, %esp
+  movl matriz_aux, %edi
+  call mostrar_matriz
+
+  movl matriz, %edi
+  call mostrar_matriz
+
+#  movl N, %ebx
+#  call determinante
+
+#  pushl det_valor
+#  pushl $mostrarResultado
+#  call printf
+#  addl $8, %esp
 
   #  movl $1, indice_fcol
   #  movl N, %ebx

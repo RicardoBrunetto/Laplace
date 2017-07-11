@@ -11,5 +11,5 @@ Implementação em Assembly de um resolutor de sistemas lineares de N equações
     - [x] Lógica para calcular o determinante parcialmente
 - [ ] Principal
   - [ ] Sequência correta dependendo da ordem
-- [ ] Inversão de colunas
+- [x] Copiar a coluna Z
 - [ ] Regra de Cramer
