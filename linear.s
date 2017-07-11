@@ -6,9 +6,7 @@ mensagemMostrar:      .asciz    "\tMatriz atual:\n"
 
 mostrarResultado:      .asciz    "\nResultado: %d\n"
 
-formatoCopiados:      .asciz    "\nESI: %d\tEDI: %d\n"
-
-formatoPulado:      .asciz    "\nVAL: %d\tEAX: %d\n"
+addr:      .asciz    "\nADDR: %x\n"
 
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
@@ -20,13 +18,6 @@ pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
 pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
 pedirXn:    .asciz    "\nInforme o coeficiente de x%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
-
-# mostrar_elemdois:   .asciz  "\nMostrarElem: %d\t\n"
-# mostrar_reg:   .asciz  "\nMostrarReg: %X\t\n"
-
-# double:   .asciz  "\nOPA: %d\t%d\n"
-
-# inserido:   .asciz  "\nTHIS ONE: %d\n"
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
@@ -382,6 +373,22 @@ determinante:
   		call free
   		addl $4, %esp
 
+      pushl %eax
+      pushl %ebx
+      pushl %ecx
+      pushl %edx
+
+      pushl %esi
+      pushl $addr
+      call printf
+      addl $8, %esp
+
+      popl %edx
+      popl %ecx
+      popl %ebx
+      popl %eax
+
+
     jmp fim_calculo_det
 
     # Para matrizes de ordem 1
@@ -575,25 +582,8 @@ ret
 #   Matriz de %esi receberá a última coluna de %edi na coluna de índice %ebx
 # Registradores Alterados:
 #   (%edi, %esi, %ebx, %ecx e %eax são salvos - não alteram)
-calcular_det_
+resolver_sistema:
 
-
-.globl _start
-
-_start:
-  call msg_inicial
-  call ler_n
-
-  # movl $5, indice_fcol
-  # call sinal_cofator
-
-  movl N, %eax
-  movl N, %ebx
-  incl %ebx
-  call alocar_matriz
-  movl %edi, matriz
-
-  call ler_dados
   movl N, %eax
   movl N, %ebx
   call alocar_matriz
@@ -613,6 +603,50 @@ _start:
   movl matriz, %edi
   call mostrar_matriz
 
+ret
+
+.globl _start
+
+_start:
+  call msg_inicial
+  call ler_n
+
+  # movl $5, indice_fcol
+  # call sinal_cofator
+
+  movl N, %eax
+  movl N, %ebx
+  incl %ebx
+  call alocar_matriz
+  movl %edi, matriz
+
+  call ler_dados
+
+  # ordem 1 não precisa fazer nada
+  cmpl $1, N
+  je resolver_sitema_ordem1
+
+  movl N, %eax
+  movl N, %ebx
+  call alocar_matriz
+  movl %edi, matriz_aux
+  movl matriz_aux, %esi
+
+  call gerar_matriz_sem_z
+
+  movl matriz_aux, %edi
+  movl N, %ebx
+  call determinante
+
+  movl det_valor, %eax
+  movl %eax, det_D    # guarda o determinante da matriz principal
+
+  pushl %esi
+  pushl $addr
+  call printf
+  addl $8, %esp
+#   call resolver_sistema
+
 #  movl N, %ebx
 #  call determinante
 
@@ -629,6 +663,12 @@ _start:
 
   #  movl %esi, %edi
   #  call mostrar_matriz
+resolver_sitema_ordem1:
+  movl matriz, %edi
+  movl $1, %ebx
+  call determinante
+
+  #
 
 fim:
   pushl $mensagemTchau
