@@ -4,6 +4,15 @@ mensagemInicial:      .asciz    "%s* Trabalho 01 - Resolutor de Sistemas Lineare
 mensagemTchau:        .asciz    "\nTchau Tchau!\n"
 mensagemMostrar:      .asciz    "\tMatriz atual:\n"
 
+mostrarResultado:      .asciz    "\nResultado: %d\n"
+
+
+espec:   .asciz   "\nEAX:%d\tEBX:%d\tDET:%d\n"
+
+espec2:   .asciz   "\nESI:%d\tEDI:%d\n"
+ediony:   .asciz   "\ntEDI:%d\n"
+espec3:   .asciz   "\nECX:%d\tEBX:%d\n"
+
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
@@ -220,7 +229,7 @@ mostrar_matriz:
   addl $8, %esp
 
   popl return_add1 # guarda o endereço de retorno
-  addl $8, %esp
+  # addl $8, %esp
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
   loop_mostrar_matriz:
@@ -275,10 +284,11 @@ determinante:
 
   cmpl $1, %ebx
   je ordem_1
-   cmpl $2, %ebx
+  cmpl $2, %ebx
   je ordem_2
 
   # Para matrizes de ordem maior igual a 3 [endereço da matriz continua em %edi]
+  # Aplica-se laplace
   ordem_maior_igual_3:
     movl %ebx, %ecx
     decl %ecx # considera N-1 de dimensão
@@ -286,59 +296,110 @@ determinante:
     mull %ecx
     mull %ecx # 4x(N-1 x N-1)
 
+    movl %ecx, %eax
+    movl %ecx, %ebx
+    call alocar_matriz
+    movl %edi, matriz_aux
+    movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz auxiliar (n-1 x n-1)
+
     movl $0, %ecx # Quantidade de colunas a serem fixadas
 
     loop_ordem_maior_igual_3:
         incl %ecx
         movl %ecx, indice_fcol
 
-        movl %ecx, %eax
-        movl %ecx, %ebx
-        call alocar_matriz
-        movl %edi, matriz_aux
-        movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz auxiliar (n-1 x n-1)
-
-        movl indice_fcol, %ecx
-        popl %ebx # recoloca a ordem da matriz atual em %ebx
-        popl %edi # %edi volta a ter o endereço da matriz atual
-
-        pushl %edi # salva novamente o endereço da matriz atual
-        pushl %ebx # salva novamente a ordem da matriz
+        movl (%esp), %ebx # recoloca a ordem da matriz atual em %ebx
+        movl 4(%esp), %edi # %edi volta a ter o endereço da matriz atual
+        pushl det_valor
+        movl $0, det_valor
         pushl %ecx # salva a coluna fixada
 
         call submatriz # encontra a submatriz
 
         movl %esi, %edi # Agora %edi é a submatriz
+        decl %ebx # %ebx contém a ordem da submatriz (sempre n-1)
 
         call determinante # calcula o determinante da submatriz
 
         popl indice_fcol
         call sinal_cofator # diz por quanto o determinante deve ser multiplicado com base na coluna fixada
 
-        mull det_valor # (-1)^(1+indice_fcol) * det_valor
-        addl %eax, det_valor # det_total += det_parcial
+        pushl %edx
+        movl  12(%esp), %edx # recupera %edi sem tirar da pilha
 
+        pushl %ecx
+        pushl %eax # Guarda o valor recém cálculado
+
+        movl indice_fcol, %ecx
+        movl $4, %eax
+        decl %ecx # indice_fcol-1
+        pushl %edx # multiplicar altera o edx
+        mull %ecx # 4*(indice_fcol-1)
+        popl %edx
+
+        addl %eax, %edx # desloca 4*(indice_fcol-1) bytes para obter o elemento fixado
+        movl (%edx), %edx # transfere para edx o próprio valor (elemento de posição [1]x[indice_fcol])
+
+        popl %eax # Recupera o sinal do cofator
+        imull %edx # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol]
+        popl %ecx # Recupera o valor da coluna fixada
+        popl %edx # Recupera o valor de edx
+        imull det_valor # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol] * det_valor (TEOREMA DE LAPLACE)
+
+        # o valor antigo do determinante está no topo da pilha
+        popl %edx
+        addl %eax, %edx
+        movl %edx, det_valor # soma o determinante antigo com o atual
 
         # verifica a quantidade de colunas ainda restantes a serem fixadas
         movl indice_fcol, %ecx
         popl %ebx # recupera a ordem da matriz
         pushl %ebx
+
         cmpl %ecx, %ebx
-        jle loop_ordem_maior_igual_3
+        jnz loop_ordem_maior_igual_3
+        popl %ebx
+        popl %edi
+        jmp fim_calculo_det
     # loop loop_ordem_maior_igual_3
 
+# 4 5 6 9 2 98 8 5 2 4 98 1 2 4 7 98 7 8 9 3 98
 
+    # Para matrizes de ordem 1
+    # O valor do determinante é o próprio elemento da matriz
     ordem_1:
+      movl (%edi), %eax
+      movl %eax, det_valor
+      jmp fim_calculo_det # só cai neste caso se vier de uma matriz 1x1
 
+    # Para matrizes de ordem 2
+    # O determinante é dado por [a11*a22 - a12*a21]
     ordem_2:
       popl %ebx
       popl %edi
 
-      movl det_valor, %eax
-      addl $
+      movl (%edi), %eax # %eax = a11
+      # pushl %ecx
+      # ovl 12(%edi), %ecx
+      imull 12(%edi) # %eax = a11 * a22
+      # popl %ecx
 
+      addl %eax, det_valor
+
+      movl 4(%edi), %eax # %eax = a12
+      imull 8(%edi) # %eax = a12 * a21
+      movl $-1, %edx
+      imull %edx # %eax = (-1) * (a12 * a21)
+
+      addl %eax, det_valor
+fim_calculo_det:
 ret
 
+
+apresentar_resultado:
+  # jmp fim
+
+# 3 2 5 5 6 3 5 6 6 9 8 7 7
 # Pré-Condição:
 #   Coluna fixa está em indice_fcol
 # Pós-Condição:
@@ -358,7 +419,7 @@ ret
 
 # Pré-Condição:
 #   Ordem da matriz principal está em %ebx
-#   Coluna fixa está em indice_fcol
+#   Coluna fixa está no topo da pilha
 #   Endereço da matriz auxiliar está em %esi
 #   Endereço da matriz principal está em %edi
 # Pós-Condição:
@@ -366,6 +427,9 @@ ret
 # Registradores Alterados:
 #   %eax %ecx %edx %edi (%esi e %ebx são recalculados - não alteram)
 submatriz:
+  # A coluna fixa vai para indice_fcol
+  movl 4(%esp), %eax
+  movl %eax, indice_fcol
   # Avança para a segunda linha
   pushl %edi
   # incl %ebx
@@ -402,7 +466,11 @@ submatriz:
   movl %ebx, %eax
   incl %ebx # retorna %ebx para o valor original
   mull %eax # (n-1 x n-1)
-  addl $4, %eax # último add não considerado
+  pushl %ebx
+  movl $4, %ebx
+  mull %ebx
+  popl %ebx
+  # addl $4, %eax # último add não considerado
   subl %eax, %esi # move para o proximo espaço em %esi
 ret
 
@@ -450,8 +518,8 @@ _start:
   call msg_inicial
   call ler_n
 
-  movl $5, indice_fcol
-  call sinal_cofator
+  # movl $5, indice_fcol
+  # call sinal_cofator
 
   movl N, %eax
   movl N, %ebx
@@ -467,17 +535,24 @@ _start:
   movl %edi, matriz_aux
   movl matriz_aux, %esi
 
-# call gerar_matriz_sem_z
-
-#  movl matriz_aux, %edi
-
-  movl $1, indice_fcol
-  movl N, %ebx
-  movl matriz, %edi
-  call submatriz
+  call gerar_matriz_sem_z
 
   movl matriz_aux, %edi
-  call mostrar_matriz
+  movl N, %ebx
+  call determinante
+
+  pushl det_valor
+  pushl $mostrarResultado
+  call printf
+
+#  movl $1, indice_fcol
+#  movl N, %ebx
+# pushl indice_fcol
+#  movl matriz, %edi
+#  call submatriz
+
+#  movl %esi, %edi
+#  call mostrar_matriz
 
 fim:
   pushl $mensagemTchau
