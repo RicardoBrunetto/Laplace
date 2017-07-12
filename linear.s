@@ -813,6 +813,11 @@ fim:
   call scanf
   addl $8, %esp
 
+  # desaloca a matriz principal
+  pushl matriz_ampliada
+  call free
+  addl $4, %esp
+
   call getchar
   cmpl $'s', %eax
   jz inicio_resolucao
