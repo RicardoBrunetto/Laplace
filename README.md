@@ -3,11 +3,11 @@
 Implementação em Assembly de um resolutor de sistemas lineares de 3 equações com 3 variáveis através dos teoremas de Cramer e Sarrus.
 
 - [x] Entrada
-- [ ] Cálculo do determinante (Sarrus)
-  - [ ] Cálculo de Sarrus
-    - [ ] Lógica para calcular o determinante por produtos
-- [ ] Principal
-  - [ ] Sequência correta dependendo da ordem
+- [x] Cálculo do determinante (Sarrus)
+  - [x] Cálculo de Sarrus
+    - [x] Lógica para calcular o determinante por produtos
+- [x] Principal
+  - [x] Sequência correta dependendo da ordem
 - [x] Copiar a coluna Z
 - [x] Regra de Cramer
 
