@@ -310,190 +310,197 @@ determinante:
   # (a11*a22*a33)+(a12*a23*31)+(a13*a21*a32)-(a13*a22*a31)-(a11*a23*a32)-(a12*a21*a33)
   movl $0, det_valor # zera o determinante atual
   pushl %edi # Guarda o endereço da matriz atual
-  # já está em a11
-  movl (%edi), %eax # %eax = a11
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $2, %ebx
-  movl $2, %ecx
-  call matricial_linear # vai para o elemento [2][2]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+  calcular_primeiro_termo:
+    # já está em a11
+    movl (%edi), %eax # %eax = a11
 
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $3, %ebx
-  movl $3, %ecx
-  call matricial_linear # vai para o elemento [3][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $2, %ebx
+    movl $2, %ecx
+    call matricial_linear # vai para o elemento [2][2]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
 
-  addl %eax, det_valor # det_valor = det_atual + (a11*a22*a33)
-  movl $1, %eax # reseta eax (nova parcela será calculada)
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $3, %ebx
+    movl $3, %ecx
+    call matricial_linear # vai para o elemento [3][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $1, %ebx
-  movl $2, %ecx
-  call matricial_linear # vai para o elemento [1][2]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    addl %eax, det_valor # det_valor = det_atual + (a11*a22*a33)
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $2, %ebx
-  movl $3, %ecx
-  call matricial_linear # vai para o elemento [2][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+  calcular_segundo_termo:
+    movl $1, %eax # reseta eax (nova parcela será calculada)
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $3, %ebx
-  movl $1, %ecx
-  call matricial_linear # vai para o elemento [3][1]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $1, %ebx
+    movl $2, %ecx
+    call matricial_linear # vai para o elemento [1][2]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $2, %ebx
+    movl $3, %ecx
+    call matricial_linear # vai para o elemento [2][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
-  addl %eax, det_valor # det_valor = det_atual + (a12*a23*a31)
-  movl $1, %eax # reseta eax (nova parcela será calculada)
-
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $1, %ebx
-  movl $3, %ecx
-  call matricial_linear # vai para o elemento [1][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $2, %ebx
-  movl $1, %ecx
-  call matricial_linear # vai para o elemento [2][1]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $3, %ebx
-  movl $2, %ecx
-  call matricial_linear # vai para o elemento [3][2]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $3, %ebx
+    movl $1, %ecx
+    call matricial_linear # vai para o elemento [3][1]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
 
-  addl %eax, det_valor # det_valor = det_atual + (a13*a21*a32)
-  movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
+    addl %eax, det_valor # det_valor = det_atual + (a12*a23*a31)
+
+  calcular_terceiro_termo:
+    movl $1, %eax # reseta eax (nova parcela será calculada)
+
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $1, %ebx
+    movl $3, %ecx
+    call matricial_linear # vai para o elemento [1][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
+
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $2, %ebx
+    movl $1, %ecx
+    call matricial_linear # vai para o elemento [2][1]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
+
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $3, %ebx
+    movl $2, %ecx
+    call matricial_linear # vai para o elemento [3][2]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $1, %ebx
-  movl $3, %ecx
-  call matricial_linear # vai para o elemento [1][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    addl %eax, det_valor # det_valor = det_atual + (a13*a21*a32)
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $2, %ebx
-  movl $2, %ecx
-  call matricial_linear # vai para o elemento [2][2]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+  calcular_quarto_termo:
+    movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $3, %ebx
-  movl $1, %ecx
-  call matricial_linear # vai para o elemento [3][1]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $1, %ebx
+    movl $3, %ecx
+    call matricial_linear # vai para o elemento [1][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $2, %ebx
+    movl $2, %ecx
+    call matricial_linear # vai para o elemento [2][2]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
-  addl %eax, det_valor # det_valor = det_atual + (a13*a22*a31)
-  movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
-
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $1, %ebx
-  movl $1, %ecx
-  call matricial_linear # vai para o elemento [2][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $2, %ebx
-  movl $3, %ecx
-  call matricial_linear # vai para o elemento [2][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
-
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $3, %ebx
-  movl $2, %ecx
-  call matricial_linear # vai para o elemento [3][2]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $3, %ebx
+    movl $1, %ecx
+    call matricial_linear # vai para o elemento [3][1]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
 
-  addl %eax, det_valor # det_valor = det_atual + (a11*a23*a32)
-  movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
+    addl %eax, det_valor # det_valor = det_atual + (a13*a22*a31)
+
+  calcular_quinto_termo:
+    movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
+
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $1, %ebx
+    movl $1, %ecx
+    call matricial_linear # vai para o elemento [2][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
+
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $2, %ebx
+    movl $3, %ecx
+    call matricial_linear # vai para o elemento [2][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
+
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $3, %ebx
+    movl $2, %ecx
+    call matricial_linear # vai para o elemento [3][2]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $1, %ebx
-  movl $2, %ecx
-  call matricial_linear # vai para o elemento [1][2]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    addl %eax, det_valor # det_valor = det_atual + (a11*a23*a32)
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $2, %ebx
-  movl $1, %ecx
-  call matricial_linear # vai para o elemento [2][1]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+  calcular_sexto_termo:
+    movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
 
-  pushl %eax # guarda eax atual
-  pushl 4(%esp) # empilha %edi para ser avançado
-  movl $3, %ebx
-  movl $3, %ecx
-  call matricial_linear # vai para o elemento [3][3]
-  popl %edi # recupera %edi já avançado
-  popl %eax # recupera o produto atual
-  imull (%edi) # %eax = produto anterior * elemento atual
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $1, %ebx
+    movl $2, %ecx
+    call matricial_linear # vai para o elemento [1][2]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $2, %ebx
+    movl $1, %ecx
+    call matricial_linear # vai para o elemento [2][1]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
 
-  addl %eax, det_valor # det_valor = det_atual + (a13*a21*a33)
+    pushl %eax # guarda eax atual
+    pushl 4(%esp) # empilha %edi para ser avançado
+    movl $3, %ebx
+    movl $3, %ecx
+    call matricial_linear # vai para o elemento [3][3]
+    popl %edi # recupera %edi já avançado
+    popl %eax # recupera o produto atual
+    imull (%edi) # %eax = produto anterior * elemento atual
+
+    addl %eax, det_valor # det_valor = det_atual + (a13*a21*a33)
+
   popl %edi
 ret
 

@@ -1,0 +1,6 @@
+\select@language {brazil}
+\contentsline {section}{Introdu\c c\~ao}{2}
+\contentsline {section}{\numberline {1}Fundamenta\c c\~ao Te\'orica}{2}
+\contentsline {section}{\numberline {2}Teorema de Sarrus}{2}
+\contentsline {section}{Refer\^encias}{3}
+\contentsline {section}{Ap\^endices}{4}
