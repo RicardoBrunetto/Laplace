@@ -78,7 +78,7 @@ ret
 # Pós-Condição:
 #   Avança i+j posições na matriz %edi
 # Registradores Alterados:
-#   %edi %eax
+#   %edi %eax %ecx
 matricial_linear:
    # Nesse momento, %edi deve estar no topo da pilha
    addl %ebx, %ecx # soma as linhas + colunas a serem deslocadas
@@ -802,13 +802,6 @@ inicio_resolucao:
   pushl $spi_res
   call printf
   addl $12, %esp
-
-  jmp fim
-
-resolver_sitema_ordem1:
-  movl matriz, %edi
-  movl $1, %ebx
-  call determinante
 
 fim:
   pushl $executar_Novamente

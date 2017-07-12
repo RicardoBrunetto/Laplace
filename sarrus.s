@@ -3,25 +3,31 @@
 mensagemInicial:      .asciz    "%s* Trabalho 01 - Resolutor de Sistemas Lineares de 3 variáveis \t*%s"
 mensagemTchau:        .asciz    "\nTchau Tchau!\n"
 mensagemMostrar:      .asciz    "\tMatriz atual:\n"
+mensagemSistema:      .asciz    "\tSistema Linear:\n"
 
-mostrarX_i:           .asciz    "\n\t=>\tx%d = %d\n"
-mostrarResultado:     .asciz    "\nDeterminante Dx%d: %d"
+mostrarX_i:           .asciz    "\n\t=>\tx_%d = %d\n"
+mostrarResultado:     .asciz    "\nDeterminante Dx_: %d"
 mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
 spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
-
+VALEDI:                 .asciz     "\n(edi): %d\n"
+OFFSET:               .asciz      "\nEAX(OFFSET): %d\tEBX(LINHA): %d\t ECX(COLUNA): %d\n"
+MOVED:                .asciz    "\nMOVED: %d (%d bytes)"
 executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\n"
 
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
 
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
-input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*xn + ... + c2*x2 + c1*x1 = res_xn\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada xi\t\t*%s"
-
-pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
+input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*x_n + ... + c2*x_2 + c1*x_1 = res_n\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada x_i\t\t*%s"
 
 pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
-pedirXn:    .asciz    "\nInforme o coeficiente de x%d: "
+pedirXn:    .asciz    "\nInforme o coeficiente de x_%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
+
+limpabuf:       .string   "%*c"
+mostrar_coef:   .asciz    "%dx_%d %s"
+plus_signal:    .asciz    "+ "
+eq_signal:      .asciz    "= "
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
@@ -34,7 +40,6 @@ matriz_aux:   .int      0
 contadorLn:   .int      0
 contadorEq:   .int      0
 N:            .int      3
-indice_fcol:  .int      0
 det_valor:    .int      0
 
 det_D:        .int      0
@@ -72,12 +77,20 @@ ret
 # Pós-Condição:
 #   Avança i+j posições na matriz %edi
 # Registradores Alterados:
-#   %edi %eax
+#   %edi %eax %ecx
 matricial_linear:
+  popl return_add1
    # Nesse momento, %edi deve estar no topo da pilha
-   addl %ebx, %ecx # soma as linhas + colunas a serem deslocadas
-   movl %ecx, %eax # move para %eax
+   movl $1, %eax
+   decl %ebx
+   mull %ebx
+   mull N
+   addl %ecx, %eax
+   decl %eax
+   movl %eax, %ebx
    call pular # vai avançar %ebx + %ecx (i+j) campos
+
+   pushl return_add1
 ret
 
 # Pré-Condição:
@@ -204,16 +217,17 @@ alocar_matriz:
   movl %eax, %edi
 ret
 
+
 # Pré-Condição:
 #   Endereço do primeiro elemento da matriz em %edi
 # Pós-Condição:
-#   Mostra a matriz na tela
+#   Mostra o sistema linear na tela
 # Registradores Alterados:
 #   %ecx  %edi
-mostrar_matriz:
+mostrar_sistema:
   pushl $divisoria
   call printf
-  pushl $mensagemMostrar
+  pushl $mensagemSistema
   call printf
   addl $8, %esp
 
@@ -221,17 +235,17 @@ mostrar_matriz:
   # addl $8, %esp
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
-  loop_mostrar_matriz:
+  loop_mostrar_sistema:
     movl %ecx, contadorLn # faz backup do valor de ecx (contador)
 
     push $pulaLinha
     call printf
     addl $4, %esp
 
-    call mostrar_linha
+    call mostrar_equacao
 
     movl contadorLn, %ecx
-    loop loop_mostrar_matriz
+    loop loop_mostrar_sistema
 
     pushl $divisoria
     call printf
@@ -239,12 +253,12 @@ mostrar_matriz:
     pushl return_add1 # empilha o endereço de retorno
     ret
 
-    mostrar_linha:
+    mostrar_equacao:
       popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
       movl N, %ecx
       incl %ecx # mostrar os n+1 inteiros
 
-      loop_mostrar_linha:
+      loop_mostrar_equacao:
         movl %ecx, contadorEq # faz backup do valor de ecx (contador)
 
         pushl %eax
@@ -252,10 +266,31 @@ mostrar_matriz:
         pushl %ecx
         pushl %edx
 
-        pushl (%edi)
-        pushl $mostrar_elem
-        call printf
-        addl $8, %esp
+        cmpl $1, %ecx
+        je printar_result
+        cmpl $2, %ecx
+        je printar_ultimo_coef
+
+        printar_coef:
+          pushl $plus_signal
+          jmp sequencia_print
+        printar_ultimo_coef:
+          pushl $eq_signal
+          jmp sequencia_print
+        printar_result:
+          pushl (%edi)
+          pushl $mostrar_elem
+          call printf
+          addl $8, %esp
+          jmp fim_print
+        sequencia_print:
+          decl %ecx
+          pushl %ecx
+          pushl (%edi)
+          pushl $mostrar_coef
+          call printf
+          addl $16, %esp
+        fim_print:
 
         popl %edx
         popl %ecx
@@ -265,148 +300,206 @@ mostrar_matriz:
         addl $4, %edi
 
         movl contadorEq, %ecx
-        loop loop_mostrar_linha
+        loop loop_mostrar_equacao
 
         pushl return_add2
 ret
 
 # Pré-Condição:
 #   Endereço do primeiro elemento da matriz em %edi
-#   Ordem da matriz em %ebx
 # Pós-Condição:
 #   O determinante da matriz somado à variável det_valor
 # Registradores Alterados:
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
+  movl $0, det_valor # zera o determinante atual
   pushl %edi # Guarda o endereço da matriz atual
-  pushl %ebx
+  # já está em a11
+  movl (%edi), %eax # %eax = a11
 
-  cmpl $1, %ebx
-  je ordem_1
-  cmpl $2, %ebx
-  je ordem_2
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $2, %ebx
+  movl $2, %ecx
+  call matricial_linear # vai para o elemento [2][2]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-  # Para matrizes de ordem maior igual a 3 [endereço da matriz continua em %edi]
-  # Aplica-se laplace
-  ordem_maior_igual_3:
-    movl %ebx, %ecx
-    decl %ecx # considera N-1 de dimensão
-    movl $4, %eax
-    mull %ecx
-    mull %ecx # 4x(N-1 x N-1)
 
-    movl %ecx, %eax
-    movl %ecx, %ebx
-    call alocar_matriz
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $3, %ebx
+  movl $3, %ecx
+  call matricial_linear # vai para o elemento [3][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-    movl %edi, %esi # A partir de agora, %esi tem o endereço do 1º elemento da matriz auxiliar (n-1 x n-1)
 
-    movl $0, %ecx # Quantidade de colunas a serem fixadas
+  addl %eax, det_valor # det_valor = det_atual + (a11*a22*a33)
+  movl $1, %eax # reseta eax (nova parcela será calculada)
 
-    loop_ordem_maior_igual_3:
-      incl %ecx
-      movl %ecx, indice_fcol
 
-      movl (%esp), %ebx # recoloca a ordem da matriz atual em %ebx
-      movl 4(%esp), %edi # %edi volta a ter o endereço da matriz atual
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $1, %ebx
+  movl $2, %ecx
+  call matricial_linear # vai para o elemento [1][2]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      pushl det_valor
-      movl $0, det_valor
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $2, %ebx
+  movl $3, %ecx
+  call matricial_linear # vai para o elemento [2][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      pushl %ecx # salva a coluna fixada
-      call submatriz # encontra a submatriz
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $3, %ebx
+  movl $1, %ecx
+  call matricial_linear # vai para o elemento [3][1]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      movl %esi, %edi # Agora %edi é a submatriz
 
-      pushl %ecx
-      popl %ecx
+  addl %eax, det_valor # det_valor = det_atual + (a12*a23*a31)
+  movl $1, %eax # reseta eax (nova parcela será calculada)
 
-      decl %ebx # %ebx contém a ordem da submatriz (sempre n-1)
 
-      pushl %edi # empilha a matriz auxiliar atual
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $1, %ebx
+  movl $3, %ecx
+  call matricial_linear # vai para o elemento [1][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      call determinante # calcula o determinante da submatriz
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $2, %ebx
+  movl $1, %ecx
+  call matricial_linear # vai para o elemento [2][1]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      popl %esi # obtém a matriz auxiliar da outra iteração (para desalocar)
-      popl indice_fcol # antigo %ecx (contador da coluna) estava no topo
-      call sinal_cofator # diz por quanto o determinante deve ser multiplicado com base na coluna fixada
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $3, %ebx
+  movl $2, %ecx
+  call matricial_linear # vai para o elemento [3][2]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      pushl %edx # guarda %edx
-      movl  12(%esp), %edx # recupera %edi sem tirar da pilha
 
-      pushl %ecx
-      pushl %eax # Guarda o valor recém cálculado
+  addl %eax, det_valor # det_valor = det_atual + (a13*a21*a32)
+  movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
 
-      movl indice_fcol, %ecx
-      movl $4, %eax
-      decl %ecx # indice_fcol-1
-      pushl %edx # multiplicar altera o edx
-      mull %ecx # 4*(indice_fcol-1)
-      popl %edx
 
-      addl %eax, %edx # desloca 4*(indice_fcol-1) bytes para obter o elemento fixado
-      movl (%edx), %edx # transfere para edx o próprio valor (elemento de posição [1]x[indice_fcol])
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $1, %ebx
+  movl $3, %ecx
+  call matricial_linear # vai para o elemento [1][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      popl %eax # Recupera o sinal do cofator
-      imull %edx # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol]
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $2, %ebx
+  movl $2, %ecx
+  call matricial_linear # vai para o elemento [2][2]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      popl %ecx # Recupera o valor da coluna fixada
-      popl %edx # Recupera o valor de %edx
-      imull det_valor # (-1)^(1+indice_fcol) * elemento [1]x[indice_fcol] * det_valor (TEOREMA DE LAPLACE)
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $3, %ebx
+  movl $1, %ecx
+  call matricial_linear # vai para o elemento [3][1]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      # o valor antigo do determinante está no topo da pilha
-      popl %edx
-      addl %eax, %edx
-      movl %edx, det_valor # soma o determinante antigo com o atual
 
-      # verifica a quantidade de colunas ainda restantes a serem fixadas
-      movl indice_fcol, %ecx
-      popl %ebx # recupera a ordem da matriz
-      pushl %ebx
+  addl %eax, det_valor # det_valor = det_atual + (a13*a22*a31)
+  movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
 
-      cmpl %ecx, %ebx
-    jnz loop_ordem_maior_igual_3
 
-      popl %ebx
-      popl %edi
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $1, %ebx
+  movl $1, %ecx
+  call matricial_linear # vai para o elemento [2][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      pushl %esi # %esi tem o endereço que foi alocado para a matriz auxiliar
-  		call free
-  		addl $4, %esp
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $2, %ebx
+  movl $3, %ecx
+  call matricial_linear # vai para o elemento [2][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-    jmp fim_calculo_det
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $3, %ebx
+  movl $2, %ecx
+  call matricial_linear # vai para o elemento [3][2]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-    # Para matrizes de ordem 1
-    # O valor do determinante é o próprio elemento da matriz
-    ordem_1:
-    popl %ebx
-    popl %edi
 
-    movl (%edi), %eax
-    movl %eax, det_valor
-    jmp fim_calculo_det # só cai neste caso se vier de uma matriz 1x1
+  addl %eax, det_valor # det_valor = det_atual + (a11*a23*a32)
+  movl $-1, %eax # reseta eax (nova parcela será calculada) -1 pois é diagonal secundária
 
-    # Para matrizes de ordem 2
-    # O determinante é dado por [a11*a22 - a12*a21]
-    ordem_2:
-      popl %ebx
-      popl %edi
 
-      movl (%edi), %eax # %eax = a11
-      imull 12(%edi) # %eax = a11 * a22
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $1, %ebx
+  movl $2, %ecx
+  call matricial_linear # vai para o elemento [1][2]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      addl %eax, det_valor
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $2, %ebx
+  movl $1, %ecx
+  call matricial_linear # vai para o elemento [2][1]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      movl 4(%edi), %eax # %eax = a12
-      imull 8(%edi) # %eax = a12 * a21
-      movl $-1, %edx
-      imull %edx # %eax = (-1) * (a12 * a21)
+  pushl %eax # guarda eax atual
+  pushl 4(%esp) # empilha %edi para ser avançado
+  movl $3, %ebx
+  movl $3, %ecx
+  call matricial_linear # vai para o elemento [3][3]
+  popl %edi # recupera %edi já avançado
+  popl %eax # recupera o produto atual
+  imull (%edi) # %eax = produto anterior * elemento atual
 
-      addl %eax, det_valor
-fim_calculo_det:
 
+  addl %eax, det_valor # det_valor = det_atual + (a13*a21*a33)
+  popl %edi
 ret
-
 
 # Pré-Condição:
 #   Endereço da matriz auxiliar já alocada está em %esi
@@ -559,8 +652,12 @@ ret
 
 _start:
   call msg_inicial
+  jmp inicio_resolucao
 
+# Inicia o procedimento
 inicio_resolucao:
+  movl $0, det_valor
+
   movl N, %eax
   movl N, %ebx
   incl %ebx
@@ -568,6 +665,13 @@ inicio_resolucao:
   movl %edi, matriz
 
   call ler_dados
+
+  pushl %edi
+  pushl %ebx
+  movl matriz, %edi
+  call mostrar_sistema
+  popl %ebx
+  popl %edi
 
   movl N, %eax
   movl N, %ebx
@@ -579,6 +683,7 @@ inicio_resolucao:
 
   movl matriz_aux, %edi
   movl N, %ebx
+
   call determinante
 
   movl det_valor, %eax
@@ -614,19 +719,16 @@ inicio_resolucao:
 
   jmp fim
 
-resolver_sitema_ordem1:
-  movl matriz, %edi
-  movl $1, %ebx
-  call determinante
-
 fim:
   pushl $executar_Novamente
-  pushl $resp
-  pushl $formatoNum
+  call printf
+  pushl $limpabuf
   call scanf
-  addl $12, %esp
-  cmpl $'s', resp
-  je inicio_resolucao
+  addl $8, %esp
+
+  call getchar
+  cmpl $'s', %eax
+  jz inicio_resolucao
 
   pushl $mensagemTchau
   call printf
@@ -634,3 +736,72 @@ fim:
 
   pushl $0
   call exit
+
+
+
+
+  # Pré-Condição:
+  #   Endereço do primeiro elemento da matriz em %edi
+  # Pós-Condição:
+  #   Mostra a matriz na tela
+  # Registradores Alterados:
+  #   %ecx  %edi
+  mostrar_matriz:
+    pushl $divisoria
+    call printf
+    pushl $mensagemMostrar
+    call printf
+    addl $8, %esp
+
+    popl return_add1 # guarda o endereço de retorno
+    # addl $8, %esp
+    movl N, %ecx # quantidade de vezes que o loop_dados vai executar
+
+    loop_mostrar_matriz:
+      movl %ecx, contadorLn # faz backup do valor de ecx (contador)
+
+      push $pulaLinha
+      call printf
+      addl $4, %esp
+
+      call mostrar_linha
+
+      movl contadorLn, %ecx
+      loop loop_mostrar_matriz
+
+      pushl $divisoria
+      call printf
+      addl $4, %esp
+      pushl return_add1 # empilha o endereço de retorno
+      ret
+
+      mostrar_linha:
+        popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
+        movl N, %ecx
+        incl %ecx # mostrar os n+1 inteiros
+
+        loop_mostrar_linha:
+          movl %ecx, contadorEq # faz backup do valor de ecx (contador)
+
+          pushl %eax
+          pushl %ebx
+          pushl %ecx
+          pushl %edx
+
+          pushl (%edi)
+          pushl $mostrar_elem
+          call printf
+          addl $8, %esp
+
+          popl %edx
+          popl %ecx
+          popl %ebx
+          popl %eax
+
+          addl $4, %edi
+
+          movl contadorEq, %ecx
+          loop loop_mostrar_linha
+
+          pushl return_add2
+  ret

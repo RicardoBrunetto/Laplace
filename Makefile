@@ -1,4 +1,4 @@
-FILE=linear
+FILE=sarrus
 
 all: clear
 
