@@ -2,17 +2,15 @@
 
 mensagemInicial:      .asciz    "%s* Trabalho 01 - Resolutor de Sistemas Lineares de 3 variáveis \t*%s"
 mensagemTchau:        .asciz    "\nTchau Tchau!\n"
-mensagemMostrar:      .asciz    "\tMatriz atual:\n"
+
 mensagemSistema:      .asciz    "\tSistema Linear:\n"
 
 mostrarX_i:           .asciz    "\n\t=>\tx_%d = %d\n"
-mostrarResultado:     .asciz    "\nDeterminante Dx_: %d"
+mostrarResultado:     .asciz    "\nDeterminante Dx_%d: %d"
 mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
 spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
-VALEDI:                 .asciz     "\n(edi): %d\n"
-OFFSET:               .asciz      "\nEAX(OFFSET): %d\tEBX(LINHA): %d\t ECX(COLUNA): %d\n"
-MOVED:                .asciz    "\nMOVED: %d (%d bytes)"
+
 executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\n"
 
 divisoria:            .asciz    "\n-----------------------------------------------------------------\n"
@@ -25,15 +23,13 @@ pedirXn:    .asciz    "\nInforme o coeficiente de x_%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
 
 limpabuf:       .string   "%*c"
+
 mostrar_coef:   .asciz    "%dx_%d %s"
 plus_signal:    .asciz    "+ "
 eq_signal:      .asciz    "= "
-
-mostrar_elem:   .asciz  "%d\t"
-formatoString:  .asciz  "%s"
-formatoChar:    .asciz  "%c"
-formatoNum:     .asciz  "%d"
-pulaLinha:      .asciz  "\n"
+mostrar_elem:   .asciz    "%d\t"
+formatoNum:     .asciz    "%d"
+pulaLinha:      .asciz    "\n"
 
 matriz:       .int      0
 matriz_aux:   .int      0
@@ -49,9 +45,7 @@ atual_index:      .int  0
 
 return_add1:  .int      0
 return_add2:  .int      0
-return_add3:  .int      0
 return_addJ:  .int      0
-resp:         .int      0
 
 .section .text
 
@@ -71,11 +65,11 @@ ret
 
 
 # Pré-Condição:
-#   Linha está em %ebx
-#   Coluna está em %ecx
+#   Linha (i) está em %ebx
+#   Coluna (j) está em %ecx
 #   Endereço incial da matriz está no topo da pilha
 # Pós-Condição:
-#   Avança i+j posições na matriz %edi
+#   Avança (i-1)*N + j posições na matriz %edi
 # Registradores Alterados:
 #   %edi %eax %ecx
 matricial_linear:
@@ -312,6 +306,8 @@ ret
 # Registradores Alterados:
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
+  # Aplica a regra de Sarrus:
+  # (a11*a22*a33)+(a12*a23*31)+(a13*a21*a32)-(a13*a22*a31)-(a11*a23*a32)-(a12*a21*a33)
   movl $0, det_valor # zera o determinante atual
   pushl %edi # Guarda o endereço da matriz atual
   # já está em a11
@@ -736,72 +732,3 @@ fim:
 
   pushl $0
   call exit
-
-
-
-
-  # Pré-Condição:
-  #   Endereço do primeiro elemento da matriz em %edi
-  # Pós-Condição:
-  #   Mostra a matriz na tela
-  # Registradores Alterados:
-  #   %ecx  %edi
-  mostrar_matriz:
-    pushl $divisoria
-    call printf
-    pushl $mensagemMostrar
-    call printf
-    addl $8, %esp
-
-    popl return_add1 # guarda o endereço de retorno
-    # addl $8, %esp
-    movl N, %ecx # quantidade de vezes que o loop_dados vai executar
-
-    loop_mostrar_matriz:
-      movl %ecx, contadorLn # faz backup do valor de ecx (contador)
-
-      push $pulaLinha
-      call printf
-      addl $4, %esp
-
-      call mostrar_linha
-
-      movl contadorLn, %ecx
-      loop loop_mostrar_matriz
-
-      pushl $divisoria
-      call printf
-      addl $4, %esp
-      pushl return_add1 # empilha o endereço de retorno
-      ret
-
-      mostrar_linha:
-        popl return_add2 # deixa %edi no topo da pilha / guarda o endereço de retorno
-        movl N, %ecx
-        incl %ecx # mostrar os n+1 inteiros
-
-        loop_mostrar_linha:
-          movl %ecx, contadorEq # faz backup do valor de ecx (contador)
-
-          pushl %eax
-          pushl %ebx
-          pushl %ecx
-          pushl %edx
-
-          pushl (%edi)
-          pushl $mostrar_elem
-          call printf
-          addl $8, %esp
-
-          popl %edx
-          popl %ecx
-          popl %ebx
-          popl %eax
-
-          addl $4, %edi
-
-          movl contadorEq, %ecx
-          loop loop_mostrar_linha
-
-          pushl return_add2
-  ret

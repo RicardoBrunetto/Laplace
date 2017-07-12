@@ -745,6 +745,9 @@ inicio_resolucao:
   movl $0, det_valor
   call ler_n
 
+  cmpl $0, N
+  jle inicio_resolucao
+
   movl N, %eax
   movl N, %ebx
   incl %ebx
