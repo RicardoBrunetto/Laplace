@@ -31,7 +31,7 @@ mostrar_elem:   .asciz    "%d\t"
 formatoNum:     .asciz    "%d"
 pulaLinha:      .asciz    "\n"
 
-matriz:       .int      0
+matriz_ampliada:       .int      0
 matriz_aux:   .int      0
 contadorLn:   .int      0
 contadorEq:   .int      0
@@ -136,7 +136,7 @@ ret
 #   %edi  %ecx
 ler_dados:
   popl return_add1 # guarda o endereço de retorno
-  movl matriz, %edi # coloca o endereço inicial da matriz em %edi
+  movl matriz_ampliada, %edi # coloca o endereço inicial da matriz em %edi
   pushl %edi # coloca %edi na pilha
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
@@ -198,7 +198,7 @@ ret
 # Pós-Condição:
 #   Endereço do primeiro elemento da nova matriz em %edi
 # Registradores Alterados:
-#   %eax  %ecx
+#   %eax %ecx %edi
 alocar_matriz:
   movl $4, %ecx
   mull %ebx # multiplica %eax x %ebx
@@ -304,7 +304,7 @@ ret
 # Pós-Condição:
 #   O determinante da matriz somado à variável det_valor
 # Registradores Alterados:
-#   %eax %ebx %ecx %edx %edi %esi
+#   %eax %ebx %ecx %edx %edi
 determinante:
   # Aplica a regra de Sarrus:
   # (a11*a22*a33)+(a12*a23*31)+(a13*a21*a32)-(a13*a22*a31)-(a11*a23*a32)-(a12*a21*a33)
@@ -512,7 +512,7 @@ ret
 #   %edi %esi %ecx
 gerar_matriz_sem_z:
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
-  movl matriz, %edi # move o endereço da matriz principal para %edi
+  movl matriz_ampliada, %edi # move o endereço da matriz principal para %edi
 
   loop_gerar_matriz_sem_z:
     movl %ecx, contadorLn # faz backup do valor de ecx (contador)
@@ -584,13 +584,11 @@ copiar_ultima_coluna:
 ret
 
 # Pré-Condição:
-#   Endereço da matriz auxiliar já alocada está em %esi
 #   Endereço da matriz principal está em %edi
-#   Índice da coluna está em %ebx
 # Pós-Condição:
-#   Matriz de %esi receberá a última coluna de %edi na coluna de índice %ebx
+#   O sistema resolvido
 # Registradores Alterados:
-#   (%edi, %esi, %ebx, %ecx e %eax são salvos - não alteram)
+#   %eax %edx %ebx %ecx %edi %esi
 resolver_sistema:
   movl $1, atual_index
   movl N, %ecx
@@ -608,13 +606,19 @@ resolver_sistema:
 
     # Não faz um loop tão grande, teve de se quebrar a execução
     continuar:
+      # desaloca a matriz auxiliar
+      pushl matriz_aux
+      call free
+      addl $4, %esp
+
       movl contador_Cramer, %ecx
+
       loop loop_resolver_sistema
       jmp fim_resolver_sistema
     pular_fim:
 
     movl matriz_aux, %esi
-    movl matriz, %edi
+    movl matriz_ampliada, %edi
     movl atual_index, %ebx
     call copiar_ultima_coluna
     incl %ebx
@@ -665,13 +669,13 @@ inicio_resolucao:
   movl N, %ebx
   incl %ebx
   call alocar_matriz
-  movl %edi, matriz
+  movl %edi, matriz_ampliada
 
   call ler_dados
 
   pushl %edi
   pushl %ebx
-  movl matriz, %edi
+  movl matriz_ampliada, %edi
   call mostrar_sistema
   popl %ebx
   popl %edi
@@ -728,6 +732,11 @@ fim:
   pushl $limpabuf
   call scanf
   addl $8, %esp
+
+  # desaloca a matriz principal
+  pushl matriz_ampliada
+  call free
+  addl $4, %esp
 
   call getchar
   cmpl $'s', %eax
