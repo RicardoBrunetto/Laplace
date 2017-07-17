@@ -15,7 +15,8 @@ Implementação em Assembly de um resolutor de sistemas lineares de 3 equações
 
 Implementação em Assembly de um resolutor de sistemas lineares de N equações com N variáveis através dos teoremas de Cramer e Laplace.
 
-- [x] Entrada
+- [ ] Entrada
+  - [ ] Entrada por arquivo
 - [x] Cálculo do determinante (Laplace)
   - [x] Gerar matriz sem a última coluna (coeficientes)
   - [x] Gerar submatriz (cofator Aij)
@@ -26,3 +27,6 @@ Implementação em Assembly de um resolutor de sistemas lineares de N equações
   - [x] Sequência correta dependendo da ordem
 - [x] Copiar a coluna Z
 - [x] Regra de Cramer
+- [ ] Usar ponto flutuante
+- [ ] Utilizar vetor de variáveis
+- [ ] Otimizar quando o coeficiente for zero
