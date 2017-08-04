@@ -28,5 +28,6 @@ Implementação em Assembly de um resolutor de sistemas lineares de N equações
 - [x] Copiar a coluna Z
 - [x] Regra de Cramer
 - [ ] Usar ponto flutuante
+  - [ ] Lógica de cada procedimento usando a pilha FPU
 - [ ] Utilizar vetor de variáveis
 - [ ] Otimizar quando o coeficiente for zero
