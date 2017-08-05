@@ -1,4 +1,4 @@
-FILE=sarrus
+FILE=linear_float
 
 all: clear
 

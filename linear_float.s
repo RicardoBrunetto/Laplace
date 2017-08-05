@@ -5,9 +5,9 @@ mensagemTchau:        .asciz    "\nTchau Tchau!\n"
 mensagemMostrar:      .asciz    "\tMatriz atual:\n"
 mensagemSistema:      .asciz    "\tSistema Linear:\n"
 
-mostrarX_i:           .asciz    "\n\t=>\tx_%d = %d\n"
-mostrarResultado:     .asciz    "\nDeterminante Dx_%d: %d"
-mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
+mostrarX_i:           .asciz    "\n\t=>\tx_%d = %lf\n"
+mostrarResultado:     .asciz    "\nDeterminante Dx_%d: %lf"
+mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %lf\n"
 
 spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
 
@@ -25,25 +25,26 @@ pedirXn:    .asciz    "\nInforme o coeficiente de x_%d: "
 pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
 
 limpabuf:       .string   "%*c"
-mostrar_coef:   .asciz    "%dx_%d %s"
+mostrar_coef:   .asciz    "%lfx_%d %s"
 plus_signal:    .asciz    "+ "
 eq_signal:      .asciz    "= "
 
-mostrar_elem:   .asciz  "%d\t"
+mostrar_elem:   .asciz  "%lf\t"
 formatoString:  .asciz  "%s"
 formatoChar:    .asciz  "%c"
+formatoDb:      .asciz  "%lf"
 formatoNum:     .asciz  "%d"
 pulaLinha:      .asciz  "\n"
 
-matriz:       .int      0
+matriz_ampliada:       .int      0
 matriz_aux:   .int      0
 contadorLn:   .int      0
 contadorEq:   .int      0
 N:            .int      0
 indice_fcol:  .int      0
-det_valor:    .int      0
+det_valor:    .double   0
 
-det_D:        .int      0
+det_D:        .double   0
 
 contador_Cramer:  .int  0
 atual_index:      .int  0
@@ -70,6 +71,25 @@ msg_inicial:
   addl $28, %esp
 ret
 
+# Pré-Condição
+#   Endereço inicial da string está na pilha
+# Pós-Condição:
+#   Double está no topo da pilha
+# Registradores Alterados:
+#   %ebx %eax %st(0)
+converte_double:
+  popl %ebx # endereço de retorno desempilhado
+  popl %eax # endereço inicial da string
+
+  finit
+  subl $8, %esp
+  pushl %eax
+  call atof
+  addl $4, %esp
+
+  fstpl (%esp)
+  pushl %ebx
+ret
 
 # Pré-Condição:
 #   Linha está em %ebx
@@ -146,7 +166,7 @@ ret
 #   %edi  %ecx
 ler_dados:
   popl return_add1 # guarda o endereço de retorno
-  movl matriz, %edi # coloca o endereço inicial da matriz em %edi
+  movl matriz_ampliada, %edi # coloca o endereço inicial da matriz em %edi
   pushl %edi # coloca %edi na pilha
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
@@ -179,7 +199,7 @@ ler_dados:
         addl $8, %esp
 
         # %edi está na pilha
-        pushl $formatoNum
+        pushl $formatoDb
         call scanf
         addl $4, %esp
 
@@ -194,7 +214,7 @@ ler_dados:
         call printf
         addl $8, %esp
 
-        pushl $formatoNum
+        pushl $formatoDb
         call scanf
         addl $4, %esp
 
@@ -583,7 +603,7 @@ ret
 #   %edi %esi %ecx
 gerar_matriz_sem_z:
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
-  movl matriz, %edi # move o endereço da matriz principal para %edi
+  movl matriz_ampliada, %edi # move o endereço da matriz principal para %edi
 
   loop_gerar_matriz_sem_z:
     movl %ecx, contadorLn # faz backup do valor de ecx (contador)
@@ -685,7 +705,7 @@ resolver_sistema:
     pular_fim:
 
     movl matriz_aux, %esi
-    movl matriz, %edi
+    movl matriz_ampliada, %edi
     movl atual_index, %ebx
     call copiar_ultima_coluna
     incl %ebx
@@ -740,13 +760,13 @@ inicio_resolucao:
   movl N, %ebx
   incl %ebx
   call alocar_matriz
-  movl %edi, matriz
+  movl %edi, matriz_ampliada
 
   call ler_dados
 
   pushl %edi
   pushl %ebx
-  movl matriz, %edi
+  movl matriz_ampliada, %edi
   call mostrar_sistema
   popl %ebx
   popl %edi
