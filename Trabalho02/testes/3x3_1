@@ -1,0 +1,9 @@
+2 5 5 6
+3 5 6 6
+9 8 7 7
+
+Resultados Esperados:
+Determinante principal: 34
+Dx1: -13
+Dx2:  33
+Dx3:  13

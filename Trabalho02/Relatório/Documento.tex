@@ -176,7 +176,7 @@ INFORMÁTICA \\
 \vspace{2cm}
 
 \begin{center}
-Relatório do Resolutor de Sistemas Lineares de\\Três Variáveis em GNU Assembly
+Relatório do Resolutor de Sistemas Lineares de\\N Variáveis em GNU Assembly
 \end{center}
 
 \vspace{3cm}
@@ -217,7 +217,7 @@ Maringá \\ 2017
 
 	\section{Fundamentação Teórica}
 
-	Tal seção busca apresentar a teoria na qual a implementação do Resolutor de Sistemas Lineares de Três variáveis se baseia. Não serão abordados aspectos referentes à linguagem de programação, tendo foco específico na técnica utilizada para resolver o problema em questão. Neste ínterim, utilizou-se o \textbf{Teorema de Cramer} para a resolução do sistema linear de três variáveis e o \textbf{Teorema de Sarrus} para os cálculos dos determinantes.
+	Tal seção busca apresentar a teoria na qual a implementação do Resolutor de Sistemas Lineares de $N$ variáveis se baseia. Não serão abordados aspectos referentes à linguagem de programação, tendo foco específico na técnica utilizada para resolver o problema em questão. Neste ínterim, utilizou-se o \textbf{Teorema de Cramer} para a resolução do sistema linear de $N$ variáveis e o \textbf{Teorema de Laplace} para os cálculos dos determinantes.
 
 	\subsection{Teorema de Cramer}
 	\label{sec:cramer}
@@ -256,21 +256,18 @@ Maringá \\ 2017
 	$$x_{i} = \frac{det(C_i)}{det(C)}$$
 	onde $C_i$ é uma matriz obtida através da substituição da coluna $i$ pela matriz dos termos independentes $Z$.
 
-	\subsection{Teorema de Sarrus}
-	\label{sec:sarrus}
-	O Teorema (ou Regra) de Sarrus consiste de uma técnica que define uma fórmula fechada para o cálculo de determinantes de matrizes de ordem 3 através do conhecimento imediato de seus elementos.
+	\subsection{Teorema de Laplace}
+	\label{sec:laplace}
+	O Teorema (ou Regra) de Laplace consiste de uma técnica que define uma fórmula recursiva para o cálculo de determinantes de matrizes de ordem $n$ através do conhecimento imediato dos determinantes de suas \textbf{submatrizes}.
 
 	\begin{figure}[h]
 		\centering
-		\includegraphics[width=0.6\linewidth]{sarrus_rule}
-		\caption{Representação da aplicação da Regra de Sarrus}
-		\label{fig:sarrus}
+		\includegraphics[width=0.6\linewidth]{laplace}
+		\caption{Representação da aplicação da Regra de Laplace}
+		\label{fig:laplace}
 	\end{figure}
 
-
-	A técnica prática consiste em repetir as duas primeiras colunas ao lado da matriz original e: somar os produtos das diagonais principais (serão três) e então subtrair de tal resultado a somatória dos produtos das diagonais secundárias (também serão três), conforme ilustra a Figura \ref{fig:sarrus}.
-
-	Contudo, em termos matemáticos, pode-se definir uma fórmula fixa que corresponda a este procedimento de duplicação de colunas. Tal fórmula é baseada no \textbf{Teorema de Laplace}. O Teorema de Laplace pode ser enunciado da seguinte maneira:
+	Em termos matemáticos, o Teorema de Laplace pode ser enunciado da seguinte maneira:
 
 	\begin{center}
 	\begin{solution}
@@ -280,34 +277,10 @@ Maringá \\ 2017
 	\end{solution}
 	\end{center}
 
-	Aplicando Laplace à uma matriz $A$ de ordem 3 e fixando a primeira linha, tem-se:
-	$$
-	A = \left[ \begin{array}{rcr}
-		a_{11} & a_{12}  & a_{13} \\
-		a_{21} & a_{22}  & a_{23} \\
-		a_{31} & a_{32}  & a_{33} \\
-	\end{array} \right]
-	$$
-	$$
-	det(A) = a_{11}(-1)^{1+1}\left| \begin{array}{rr}
-	a_{22}  & a_{23} \\
-	a_{32}  & a_{33} \\
-	\end{array} \right| +
-	a_{12}(-1)^{1+2}\left| \begin{array}{rr}
-	a_{21}  & a_{23} \\
-	a_{31}  & a_{33} \\
-	\end{array} \right| +
-	a_{13}(-1)^{1+3}\left| \begin{array}{rr}
-	a_{21}  & a_{22} \\
-	a_{31}  & a_{32} \\
-	\end{array} \right|
-	$$
-	Aplicando a regra de determinantes de matriz de ordem 2 (que também advém de Laplace), tem-se:
-	\begin{equation} \label{eq:det}
-	det(A) = a_{11}a_{22}a_{33} + a_{12}a_{23}a_{33} + a_{13}a_{21}a_{32} - a_{11}a_{23}a_{32} - a_{12}a_{23}a_{31} - a_{13}a_{22}a_{31}
-	\end{equation}
+	Sua prova formal será omitida, pois foge do escopo deste trabalho e demanda conhecimentos mais avançados no âmbito matemático.
 
-	Assim, define-se a \textbf{Regra de Sarrus} como a equação \ref{eq:det}.
+	Assim, define-se a \textbf{Regra de Laplace}, através do cálculo recursivo dos determinantes. Nesse sentido, o caso base do Teorema de Laplace é quando $n = 1$ e $det(A) = |a_{11}| = a_{11}$.
+	Contudo, há uma fórmula fechada\footnote{Entende-se por fechada a ausência da recursão.} para se calcular o determinante de matrizes de ordem $2$, também baseada no Teorema de Laplace.
 
 	\section{Estrutura e Funcionamento}
 	Para que se pudesse trabalhar com melhor aproveitamento de código, desempenho e legibilidade, foram criadas funcionalidades específicas para que fossem chamadas durante a execução do programa. Cada uma das funcionalidades possui uma descrição baseada em:
@@ -349,9 +322,9 @@ Maringá \\ 2017
 
 	\subsection*{inserir\_fim\_str}
 	\begin{itens}
-		\item \textbf{Propósito}: Inserir o caractere de fim de string '\0'.
+		\item \textbf{Propósito}: Inserir o caractere de fim de string.
 		\item \textbf{Pré-Condição}: O endereço da string está no topo da pilha.
-		\item \textbf{Pós-Condição}: A string contém \0 no final.
+		\item \textbf{Pós-Condição}: A string contém o caractere que sinaliza seu fim.
 		\item \textbf{Registradores alterados}: -
 	\end{itens}
 
@@ -518,7 +491,7 @@ Maringá \\ 2017
 		c_1x_1 & c_1x_2 & \dots & c_1x_n & res_{eq1}\\
 		c_2x_1 & c_2x_2 & \dots & c_2x_n & res_{eq2}\\
 		c_3x_1 & c_3x_2 & \dots & c_3x_n & res_{eq3}\\
-		\vdots & \vdots & \ddots & \vdots &\\
+		\vdots & \vdots & \ddots & \vdots & \vdots\\
 		c_nx_1 & c_nx_2 & \dots & c_nx_n & res_{eqn}\\
 	\end{bmatrix}
 	\]

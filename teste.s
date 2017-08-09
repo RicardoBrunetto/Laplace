@@ -42,13 +42,16 @@ byte_espaco:  .byte ' '
 file_descriptor: .int 0
 file_path:     .space   100
 buffer_str:     .space 2
-var:  .int 0
+var:  .double 0
 return_add1:  .int      0
 return_add2:  .int      0
+
+menosum:      .double   -1
 
 str_format: .asciz  "\nei: %s\n"
 str_in:     .asciz  "%s"
 int_format: .asciz  "\n%i\n"
+float_format: .asciz  "\n%lf\n"
 
 two_addr:   .asciz  "\n%X\n%X\n"
 
@@ -127,20 +130,42 @@ ler_elemento:
   movl SYS_READ, %eax
   movl file_descriptor, %ebx
   movl $buffer_str, %ecx
-  movl $2, %edx
+  movl $1, %edx
   int $0x80
 
-  pushl $buffer_str
-  call inserir_fim_str
+  movl $buffer_str, %edi
 
+  # lê byte a byte para detectar espaços / enters
+  loop_ler_elemento:
+    movb (%edi), %al
+    cmpb byte_enter, %al
+
+    je fim_loop_ler_elemento
+    cmpb byte_espaco, %al
+    je fim_loop_ler_elemento
+    addl $1, %edi
+
+    movl SYS_READ, %eax
+    movl file_descriptor, %ebx
+    movl %edi, %ecx
+    movl $1, %edx
+    int $0x80
+
+    jmp loop_ler_elemento
+  fim_loop_ler_elemento:
+
+#  pushl $buffer_str
+  # call inserir_fim_str
+
+  finit
   pushl $buffer_str
-  call atoi
+  call atof
   addl $4, %esp
 
-  movl %eax, var
-
   popa
-  pushl var
+
+  subl $8, %esp
+  fstpl (%esp)
   pushl return_add1
 ret
 
@@ -158,20 +183,29 @@ ler_arquivo:
   movl %eax, file_descriptor
 
   call ler_elemento
-  popl %eax
 
-  pushl %eax
-  pushl $int_format
+  fldl (%esp)
+
+  pushl $float_format
   call printf
-  addl $8, %esp
+  addl $12, %esp
 
   call ler_elemento
-  popl %eax
 
-  pushl %eax
-  pushl $int_format
+  fldl (%esp)
+
+  pushl $float_format
   call printf
-  addl $8, %esp
+  addl $12, %esp
+
+  fadd %st(1), %st(0)
+
+  subl $8, %esp
+  fstpl (%esp)
+
+  pushl $float_format
+  call printf
+  addl $12, %esp
 
   # Fecha arquivo
   movl SYS_CLOSE, %eax

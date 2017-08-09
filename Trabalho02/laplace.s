@@ -11,6 +11,7 @@ mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
 sys_clear:            .asciz    "clear"
 spi_res:              .asciz    "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
+file_invalido:        .asciz    "\nARQUIVO INVALIDO!!!\n"
 
 executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\n"
 
@@ -19,7 +20,9 @@ divisoria:            .asciz    "\n---------------------------------------------
 author:   .asciz    "Autor:\nRicardo Henrique Brunetto\t-\tRA: 94182\n"
 input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n*\tcn*x_n + ... + c2*x_2 + c1*x_1 = res_n\t\t\t*\n*\t\t\t\t\t\t\t\t*\n*\tOnde será solicitado o coeficiente de cada x_i\t\t*%s"
 
-pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
+pedirN:     .asciz    "\nInforme a quantidade de variáveis (equações):\t"
+pedirCam:   .asciz    "\nInforme o caminho da entrada%s:\t"
+sugerirCam: .asciz    " (tente algo como testes/3x3_1) "
 
 informarLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
 informarXn:    .asciz    "Coeficiente de x_%d: %d\n"
@@ -32,7 +35,6 @@ eq_signal:      .asciz    "= "
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
-formatoBuf:     .asciz  "\tBuf: %s\t"
 formatoChar:    .asciz  "%c"
 formatoNum:     .asciz  "%d"
 pulaLinha:      .asciz  "\n"
@@ -63,7 +65,6 @@ file_descriptor:  .int      0
 valor_lido:       .int      0
 file_path:        .space    100
 buffer_str:       .space    2
-backup_adr:       .int      0
 
 SYS_EXIT:   .int 1
 SYS_FORK:   .int 2
@@ -121,22 +122,6 @@ msg_inicial:
   addl $28, %esp
 ret
 
-
-# Pré-Condição:
-#   Linha está em %ebx
-#   Coluna está em %ecx
-#   Endereço incial da matriz está no topo da pilha
-# Pós-Condição:
-#   Avança i+j posições na matriz %edi
-# Registradores Alterados:
-#   %edi %eax %ecx
-matricial_linear:
-   # Nesse momento, %edi deve estar no topo da pilha
-   addl %ebx, %ecx # soma as linhas + colunas a serem deslocadas
-   movl %ecx, %eax # move para %eax
-   call pular # vai avançar %ebx + %ecx (i+j) campos
-ret
-
 # Pré-Condição:
 #   Endereço de memória no topo da pilha
 # Pós-Condição:
@@ -147,7 +132,7 @@ proximo_campo:
   popl return_addJ
 
   popl %edi
-  addl $8, %edi
+  addl $4, %edi
   pushl %edi
 
   pushl return_addJ
@@ -167,7 +152,7 @@ pular:
   pushl %ebx
 
   movl %ebx, %eax
-  movl $8, %ebx
+  movl $4, %ebx
   mull %ebx   # faz eax * 4 (%ebx * 4)
 
   addl %eax, %edi
@@ -223,7 +208,7 @@ ret
 # Pré-Condição:
 #   file_descriptor contém o descritor do arquivo em uma posição válida
 # Pós-Condição:
-#   O valor lido está no topo da pilha
+#   O valor lido está em valor_lido
 # Registradores Alterados:
 ler_elemento:
   popl return_addE
@@ -279,6 +264,11 @@ ler_dados:
 
   pusha
 
+  pushl $sugerirCam
+  pushl $pedirCam
+  call printf
+  addl $8, %esp
+
   pushl $file_path
   pushl $formatoString
   call scanf
@@ -290,6 +280,9 @@ ler_dados:
   movl O_RDONLY, %ecx
   int $0x80
   movl %eax, file_descriptor
+
+  cmpl $0, %eax
+  jl erro_arquivo
 
   popa
 
@@ -369,9 +362,9 @@ ret
 # Registradores Alterados:
 #   %eax  %ecx
 alocar_matriz:
-  movl $8, %ecx
+  movl $4, %ecx
   mull %ebx # multiplica %eax x %ebx
-  mull %ecx # 8 x (%eax x %ebx), pois 1 inteiro ocupa 4 bytes
+  mull %ecx # 4 x (%eax x %ebx), pois 1 inteiro ocupa 4 bytes
 
   movl %eax, %ecx
   pushl %ecx
@@ -460,7 +453,7 @@ mostrar_sistema:
         popl %ebx
         popl %eax
 
-        addl $8, %edi
+        addl $4, %edi
 
         movl contadorEq, %ecx
         loop loop_mostrar_equacao
@@ -527,7 +520,7 @@ mostrar_matriz:
         popl %ebx
         popl %eax
 
-        addl $8, %edi
+        addl $4, %edi
 
         movl contadorEq, %ecx
         loop loop_mostrar_linha
@@ -544,16 +537,19 @@ ret
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
   # Frame:
-  #
-  # ----------------
-  #   %
-  # ----------------  <--- Ordem 2 (não empilha mais nada)
+  # ---------------------- <--- Topo do frame
+  #   %edi (&submatriz)
+  # ----------------------
+  #   det_valor (det prcl)
+  # ----------------------
+  #   %ecx (coluna fixa)
+  # ----------------------  <--- Ordem 2 (não empilha mais nada)
   #   %ebx (ordem)
-  # ----------------
+  # ----------------------
   #   %edi (&matriz)
-  # ----------------
+  # ----------------------
   #   &retorno
-  # ----------------
+  # ----------------------
   pushl %edi # Guarda o endereço da matriz atual
   pushl %ebx
 
@@ -567,9 +563,9 @@ determinante:
   ordem_maior_igual_3:
     movl %ebx, %ecx
     decl %ecx # considera N-1 de dimensão
-    movl $8, %eax
+    movl $4, %eax
     mull %ecx
-    mull %ecx # 8x(N-1 x N-1)
+    mull %ecx # 4x(N-1 x N-1)
 
     movl %ecx, %eax
     movl %ecx, %ebx
@@ -611,10 +607,10 @@ determinante:
       pushl %eax # Guarda o valor recém cálculado
 
       movl indice_fcol, %ecx
-      movl $8, %eax
+      movl $4, %eax
       decl %ecx # indice_fcol-1
       pushl %edx # multiplicar altera o edx
-      mull %ecx # 8*(indice_fcol-1)
+      mull %ecx # 4*(indice_fcol-1)
       popl %edx
 
       addl %eax, %edx # desloca 4*(indice_fcol-1) bytes para obter o elemento fixado
@@ -731,10 +727,10 @@ submatriz:
 
     movl  (%edi), %edx
     movl  %edx, (%esi) # copia o elemento para a posição atual em %esi
-    addl $8, %esi # move para o proximo espaço em %esi
+    addl $4, %esi # move para o proximo espaço em %esi
 
     final_laco_submatriz:
-      addl $8, %edi # move para o proximo espaço em %edi
+      addl $4, %edi # move para o proximo espaço em %edi
       cmpl %eax, %ebx  # chegou na última coluna
       jne pular_reset_eax
       movl $0, %eax
@@ -747,7 +743,7 @@ submatriz:
   incl %ebx # retorna %ebx para o valor original
   mull %eax # (n-1 x n-1)
   pushl %ebx
-  movl $8, %ebx
+  movl $4, %ebx
   mull %ebx
   popl %ebx
   # addl $4, %eax # último add não considerado
@@ -770,7 +766,7 @@ gerar_matriz_sem_z:
     call linha_gerar_matriz_sem_z
 
     # %edi estará em um elemnto [k][N] e deve-se pular o elemento [k][N+1]
-    addl $8, %edi # pula para o proximmo elemento de %edi
+    addl $4, %edi # pula para o proximmo elemento de %edi
 
     movl contadorLn, %ecx
     loop loop_gerar_matriz_sem_z
@@ -785,8 +781,8 @@ gerar_matriz_sem_z:
         movl  (%edi), %eax
         movl  %eax, (%esi) # copia o elemento para a posição atual em %esi
 
-        addl $8, %esi # move para o proximo espaço em %esi
-        addl $8, %edi # move para o proximo espaço em %edi
+        addl $4, %esi # move para o proximo espaço em %esi
+        addl $4, %edi # move para o proximo espaço em %edi
 
         movl contadorEq, %ecx
         loop loop_linha_gerar_matriz_sem_z
@@ -823,7 +819,7 @@ copiar_ultima_coluna:
     movl (%edi), %eax # copia o elemento
     movl %eax, (%esi)
 
-    addl $8, %edi # a matriz principal tem uma linha a mais que deve ser considerada
+    addl $4, %edi # a matriz principal tem uma linha a mais que deve ser considerada
   loop loop_copiar_ultima_coluna
 
   popl %esi # recupera a matriz principal
@@ -909,10 +905,6 @@ _start:
 
 # Inicia o procedimento
 inicio_resolucao:
-  pushl $sys_clear
-  call system
-  addl $4, %esp
-
   movl $0, det_valor
   call ler_n
 
@@ -989,10 +981,22 @@ fim:
   call free
   addl $4, %esp
 
+
   call getchar
   cmpl $'s', %eax
-  jz inicio_resolucao
+  jnz nope
 
+  pushl $sys_clear
+  call system
+  addl $4, %esp
+  jmp inicio_resolucao
+
+erro_arquivo:
+  pushl $file_invalido
+  call printf
+  addl $4, %esp
+
+nope:
   pushl $mensagemTchau
   call printf
   addl $4, %esp

@@ -32,7 +32,6 @@ eq_signal:      .asciz    "= "
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
-formatoBuf:     .asciz  "\tBuf: %s\t"
 formatoChar:    .asciz  "%c"
 formatoNum:     .asciz  "%d"
 pulaLinha:      .asciz  "\n"
@@ -63,7 +62,6 @@ file_descriptor:  .int      0
 valor_lido:       .int      0
 file_path:        .space    100
 buffer_str:       .space    2
-backup_adr:       .int      0
 
 SYS_EXIT:   .int 1
 SYS_FORK:   .int 2
@@ -544,16 +542,19 @@ ret
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
   # Frame:
-  #
-  # ----------------
-  #   %
-  # ----------------  <--- Ordem 2 (não empilha mais nada)
+  # ---------------------- <--- Topo do frame
+  #   %edi (&submatriz)
+  # ----------------------
+  #   det_valor (det prcl)
+  # ----------------------
+  #   %ecx (coluna fixa)
+  # ----------------------  <--- Ordem 2 (não empilha mais nada)
   #   %ebx (ordem)
-  # ----------------
+  # ----------------------
   #   %edi (&matriz)
-  # ----------------
+  # ----------------------
   #   &retorno
-  # ----------------
+  # ----------------------
   pushl %edi # Guarda o endereço da matriz atual
   pushl %ebx
 

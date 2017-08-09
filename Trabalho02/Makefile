@@ -1,4 +1,4 @@
-FILE=linear_file
+FILE=laplace
 
 all: clear
 
