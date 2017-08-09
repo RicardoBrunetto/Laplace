@@ -1,4 +1,5 @@
-FILE=linear_float
+#FILE=teste
+FILE=linear_file
 
 all: clear
 

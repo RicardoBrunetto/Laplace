@@ -1,0 +1,15 @@
+6 9 8 5 88
+3 5 6 4 88
+2 3 5 1 88
+2 6 5 8 88
+
+Resultados Esperados:
+Determinante principal: -38
+Dx4:  1320
+Dx3: -616
+Dx2: -880
+Dx1:  264
+x4:  -34
+x3:   16
+x2:   23
+x1:  -6

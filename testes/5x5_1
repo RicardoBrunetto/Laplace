@@ -1,0 +1,18 @@
+6 9 8 5 8 56
+3 5 6 4 6 56
+2 3 5 1 7 56
+2 6 5 8 8 56
+2 3 4 5 2 56
+
+Resultados Esperados:
+Determinante principal: -174
+Dx5: -4032
+Dx4:  4592
+Dx3: -1008
+Dx2: -1792
+Dx1: -1232
+x4:   23
+x4:  -26
+x3:   5
+x2:   10
+x1:   7

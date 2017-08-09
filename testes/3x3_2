@@ -1,0 +1,12 @@
+1 2 1 8
+2 -1 1 3
+3 1 -1 2
+
+Resultados Esperados:
+Determinante principal: 15
+Dx3: 15
+Dx2: 30
+Dx1: 45
+x3:   1
+x2:   2
+x1:   3

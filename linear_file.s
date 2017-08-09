@@ -9,7 +9,8 @@ mostrarX_i:           .asciz    "\n\t=>\tx_%d = %d\n"
 mostrarResultado:     .asciz    "\nDeterminante Dx_%d: %d"
 mostrarResultado_D:   .asciz    "\n\n\n=>\tDeterminante Principal: %d\n"
 
-spi_res:              .asciz     "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
+sys_clear:            .asciz    "clear"
+spi_res:              .asciz    "\n%s\tSISTEMA IMPOSSÍVEL | POSSÍVEL E INDETERMINADO%s\n"
 
 executar_Novamente:   .asciz    "\n\nDeseja executar novamente?\n<s>im | <n>ão\n"
 
@@ -20,9 +21,9 @@ input_f:  .asciz    "%s*\tA inserção das linhas é do seguinte formato:\t\t*\n
 
 pedirN:     .asciz    "\nInforme a quantidade de variáveis (e equações):\t"
 
-pedirLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
-pedirXn:    .asciz    "\nInforme o coeficiente de x_%d: "
-pedirRes:   .asciz    "\nInforme o resultado da equação %d: "
+informarLn:    .asciz    "\n---------- Equação (Linha da Matriz) %d ----------\n"
+informarXn:    .asciz    "Coeficiente de x_%d: %d\n"
+informarRes:   .asciz    "Resultado da equação %d: %d\n"
 
 limpabuf:       .string   "%*c"
 mostrar_coef:   .asciz    "%dx_%d %s"
@@ -31,6 +32,7 @@ eq_signal:      .asciz    "= "
 
 mostrar_elem:   .asciz  "%d\t"
 formatoString:  .asciz  "%s"
+formatoBuf:     .asciz  "\tBuf: %s\t"
 formatoChar:    .asciz  "%c"
 formatoNum:     .asciz  "%d"
 pulaLinha:      .asciz  "\n"
@@ -52,7 +54,56 @@ return_add1:  .int      0
 return_add2:  .int      0
 return_add3:  .int      0
 return_addJ:  .int      0
+return_addE:  .int      0
+return_addES: .int      0
 resp:         .int      0
+
+# Labels para arquivos
+file_descriptor:  .int      0
+valor_lido:       .int      0
+file_path:        .space    100
+buffer_str:       .space    2
+backup_adr:       .int      0
+
+SYS_EXIT:   .int 1
+SYS_FORK:   .int 2
+SYS_READ:   .int 3
+SYS_WRITE:  .int 4
+SYS_OPEN:   .int 5
+SYS_CLOSE:  .int 6
+SYS_CREAT:  .int 8
+
+STD_OUT:    .int 1
+STD_IN:     .int 2
+
+O_RDONLY:   .int 0x0000
+O_WRONLY:   .int 0x0001
+O_RDWR:     .int 0x0002
+O_CREAT:    .int 0x0040
+O_EXCL:     .int 0x0080
+O_APPEND:   .int 0x0400
+O_TRUNC:    .int 0x0200
+
+S_IRWXU:    .int 0x01C0
+S_IRUSR:    .int 0x0100
+S_IWUSR:    .int 0x0040
+S_IRWXG:    .int 0x0038
+S_IRGRP:    .int 0x0020
+S_IWGRP:    .int 0x0010
+S_IXGRP:    .int 0x0008
+S_IRWXO:    .int 0x0007
+S_IROTH:    .int 0x0004
+S_IWOTH:    .int 0x0002
+S_IXOTH:    .int 0x0001
+S_NADA:     .int 0x0000
+
+byte_enter:   .byte 10
+byte_return:  .byte 13
+byte_NULL:    .byte 0
+byte_espaco:  .byte ' '
+
+mostrar_addr: .asciz  "\t%X => %d\n"
+
 
 .section .text
 
@@ -138,23 +189,117 @@ ler_n:
   addl $8, %esp
 ret
 
+# -------------------------------------------------------------------------------------------- FILE
+
+# Pré-Condição:
+#   O endereço da string está no topo da pilha
+# Pós-Condição:
+#   A string contém \0 no final
+# Registradores Alterados:
+inserir_fim_str:
+  popl return_addES
+  pushl %edi
+  movl 4(%esp), %edi
+  # pusha
+  movl $0, %ecx
+  # econtra o enter
+  loop_inserir_fim_str:
+    addl $1, %ecx
+    movb (%edi), %al
+    cmpb byte_enter, %al
+    jz fim_loop_inserir_fim_str
+    addl $1, %edi
+    jmp loop_inserir_fim_str
+  fim_loop_inserir_fim_str:
+  movb byte_NULL, %al
+  incl %edi
+  movb %al, (%edi)
+  # popa
+  popl  %edi
+  popl %edi
+  pushl return_addES
+ret
+
+# Pré-Condição:
+#   file_descriptor contém o descritor do arquivo em uma posição válida
+# Pós-Condição:
+#   O valor lido está no topo da pilha
+# Registradores Alterados:
+ler_elemento:
+  popl return_addE
+
+  movl SYS_READ, %eax
+  movl file_descriptor, %ebx
+  movl $buffer_str, %ecx
+  movl $1, %edx
+  int $0x80
+
+  movl $buffer_str, %edi
+
+  # lê byte a byte para detectar espaços / enters
+  loop_ler_elemento:
+    movb (%edi), %al
+    cmpb byte_enter, %al
+
+    je fim_loop_ler_elemento
+    cmpb byte_espaco, %al
+    je fim_loop_ler_elemento
+    addl $1, %edi
+
+    movl SYS_READ, %eax
+    movl file_descriptor, %ebx
+    movl %edi, %ecx
+    movl $1, %edx
+    int $0x80
+
+    jmp loop_ler_elemento
+  fim_loop_ler_elemento:
+
+  # pushl $buffer_str
+  # call inserir_fim_str
+
+  pushl $buffer_str
+  call atoi
+  addl $4, %esp
+  movl %eax, valor_lido
+
+  pushl return_addE
+ret
+
 # Pré-Condição:
 #   Endereço da matriz principal em %edi
 # Pós-Condição:
 #   Preenche a matriz %edi (N x N+1)
 # Registradores Alterados:
-#   %edi  %ecx
+#   %edi  %ecx %edx
 ler_dados:
   popl return_add1 # guarda o endereço de retorno
   movl matriz_ampliada, %edi # coloca o endereço inicial da matriz em %edi
   pushl %edi # coloca %edi na pilha
+
+  pusha
+
+  pushl $file_path
+  pushl $formatoString
+  call scanf
+  addl $8, %esp
+
+  # Abre arquivo
+  movl SYS_OPEN, %eax
+  movl $file_path, %ebx
+  movl O_RDONLY, %ecx
+  int $0x80
+  movl %eax, file_descriptor
+
+  popa
+
   movl N, %ecx # quantidade de vezes que o loop_dados vai executar
 
   loop_ler_dados:
     movl %ecx, contadorLn # faz backup do valor de ecx (contador)
 
     pushl %ecx
-    push $pedirLn
+    push $informarLn
     call printf
     addl $8, %esp
 
@@ -162,6 +307,11 @@ ler_dados:
 
     movl contadorLn, %ecx
     loop loop_ler_dados
+
+    # Fecha arquivo
+    movl SYS_CLOSE, %eax
+    movl file_descriptor, %ebx
+    int $0x80
 
     pushl return_add1 # empilha o endereço de retorno
     ret
@@ -173,15 +323,17 @@ ler_dados:
       loop_ler_equacao:
         movl %ecx, contadorEq # faz backup do valor de ecx (contador)
 
-        pushl contadorEq
-        pushl $pedirXn
-        call printf
-        addl $8, %esp
+        call ler_elemento
+        popl %edi
+        movl valor_lido, %edx
+        movl %edx, (%edi)
+        pushl %edi
 
-        # %edi está na pilha
-        pushl $formatoNum
-        call scanf
-        addl $4, %esp
+        pushl (%edi)
+        pushl contadorEq
+        pushl $informarXn
+        call printf
+        addl $12, %esp
 
         call proximo_campo
 
@@ -189,19 +341,26 @@ ler_dados:
         loop loop_ler_equacao
 
         # Acabaram os coeficientes de xn. Pede o resultado da equação.
-        pushl contadorLn
-        pushl $pedirRes
-        call printf
-        addl $8, %esp
+        call ler_elemento
+        popl %edi
+        movl valor_lido, %edx
+        movl %edx, (%edi)
+        pushl %edi
 
-        pushl $formatoNum
-        call scanf
-        addl $4, %esp
+        pushl (%edi)
+        pushl contadorLn
+        pushl $informarRes
+        call printf
+        addl $12, %esp
 
         call proximo_campo # deixa %edi pronto para a proxima linha
 
       pushl return_add2
 ret
+
+# -------------------------------------------------------------------------------------------- FILE
+
+
 
 # Pré-Condição:
 #   Ordem da matriz está em %eax (linhas) e %ebx (colunas)
@@ -384,6 +543,17 @@ ret
 # Registradores Alterados:
 #   %eax %ebx %ecx %edx %edi %esi
 determinante:
+  # Frame:
+  #
+  # ----------------
+  #   %
+  # ----------------  <--- Ordem 2 (não empilha mais nada)
+  #   %ebx (ordem)
+  # ----------------
+  #   %edi (&matriz)
+  # ----------------
+  #   &retorno
+  # ----------------
   pushl %edi # Guarda o endereço da matriz atual
   pushl %ebx
 
@@ -423,9 +593,6 @@ determinante:
       call submatriz # encontra a submatriz
 
       movl %esi, %edi # Agora %edi é a submatriz
-
-      pushl %ecx
-      popl %ecx
 
       decl %ebx # %ebx contém a ordem da submatriz (sempre n-1)
 
@@ -742,6 +909,10 @@ _start:
 
 # Inicia o procedimento
 inicio_resolucao:
+  pushl $sys_clear
+  call system
+  addl $4, %esp
+
   movl $0, det_valor
   call ler_n
 

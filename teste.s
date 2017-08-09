@@ -33,45 +33,148 @@ S_IWOTH:    .int 0x0002
 S_IXOTH:    .int 0x0001
 S_NADA:     .int 0x0000
 
+byte_enter:   .byte 10
+byte_return:  .byte 13
+byte_NULL:    .byte 0
+byte_espaco:  .byte ' '
+
+
+file_descriptor: .int 0
+file_path:     .space   100
+buffer_str:     .space 2
+var:  .int 0
+return_add1:  .int      0
+return_add2:  .int      0
+
+str_format: .asciz  "\nei: %s\n"
+str_in:     .asciz  "%s"
+int_format: .asciz  "\n%i\n"
+
+two_addr:   .asciz  "\n%X\n%X\n"
+
+
 teste:    .asciz  "19.21"
 mostrafloat: .asciz "\n%lf\n"
-var:        .space  8
 te:         .int    0
+
+
+
 .section .text
 .globl _start
 _start:
-  pushl $teste
-  call converte_double
+  call ler_caminho_entrada
 
-  pushl $mostrafloat
+  pushl $file_path
+  pushl $str_format
   call printf
-  addl $4, %esp
+  addl $8, %esp
 
+  call ler_arquivo
 
   pushl $0
   call exit
 
-# Pré-Condição
-#   Endereço inicial da string está na pilha
+# Pré-Condição:
 # Pós-Condição:
-#   Double está no topo da pilha
+#   A string com o nome do arquivo de entrada está em file_path
 # Registradores Alterados:
-#   %ebx %eax %st(0)
-converte_double:
-  popl %ebx # endereço de retorno desempilhado
-  popl %eax # endereço inicial da string
+ler_caminho_entrada:
+  pusha
+  pushl $file_path
+  pushl $str_in
+  call scanf
+  addl $8, %esp
+  popa
+ret
 
-  finit
-  subl $8, %esp
+# Pré-Condição:
+#   O endereço da string está no topo da pilha
+# Pós-Condição:
+#   A string contém \0 no final
+# Registradores Alterados:
+#   %edi
+inserir_fim_str:
+  popl return_add2
+  popl %edi
+  pusha
+  movl $0, %ecx
+  # econtra o enter
+  loop_inserir_fim_str:
+    addl $1, %ecx
+    movb (%edi), %al
+    cmpb byte_enter, %al
+    jz fim_loop_inserir_fim_str
+    addl $1, %edi
+    jmp loop_inserir_fim_str
+  fim_loop_inserir_fim_str:
+  movb byte_NULL, %al
+  incl %edi
+  movb %al, (%edi)
+  popa
+  pushl return_add2
+ret
+
+
+# Pré-Condição:
+#   file_descriptor contém o descritor do arquivo em uma posição válida
+# Pós-Condição:
+#   O valor lido está no topo da pilha
+# Registradores Alterados:
+ler_elemento:
+  popl return_add1
+
+  pusha
+  movl SYS_READ, %eax
+  movl file_descriptor, %ebx
+  movl $buffer_str, %ecx
+  movl $2, %edx
+  int $0x80
+
+  pushl $buffer_str
+  call inserir_fim_str
+
+  pushl $buffer_str
+  call atoi
+  addl $4, %esp
+
+  movl %eax, var
+
+  popa
+  pushl var
+  pushl return_add1
+ret
+
+# Pré-Condição:
+#   O nome do arquivo de entrada está em file_path
+# Pós-Condição:
+#
+# Registradores Alterados:
+ler_arquivo:
+  # Abre arquivo
+  movl SYS_OPEN, %eax
+  movl $file_path, %ebx
+  movl O_RDONLY, %ecx
+  int $0x80
+  movl %eax, file_descriptor
+
+  call ler_elemento
+  popl %eax
+
   pushl %eax
-  call atof
-  addl $4, %esp
-  fstl var
-
-  fstpl (%esp)
-  pushl $mostrafloat
+  pushl $int_format
   call printf
-  addl $4, %esp
+  addl $8, %esp
 
-  pushl %ebx
+  call ler_elemento
+  popl %eax
+
+  pushl %eax
+  pushl $int_format
+  call printf
+  addl $8, %esp
+
+  # Fecha arquivo
+  movl SYS_CLOSE, %eax
+  movl file_descriptor, %ebx
+  int $0x80
 ret
