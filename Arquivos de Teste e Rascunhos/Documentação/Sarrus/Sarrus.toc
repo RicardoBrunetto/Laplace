@@ -1,0 +1,8 @@
+\select@language {brazil}
+\contentsline {section}{Introdu\c c\~ao}{2}
+\contentsline {section}{\numberline {1}Fundamenta\c c\~ao Te\'orica}{2}
+\contentsline {subsection}{\numberline {1.1}Teorema de Cramer}{2}
+\contentsline {subsection}{\numberline {1.2}Teorema de Sarrus}{3}
+\contentsline {section}{\numberline {2}Estrutura e Funcionamento}{5}
+\contentsline {section}{Refer\^encias}{7}
+\contentsline {section}{Ap\^endices}{8}
