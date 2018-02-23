@@ -2,23 +2,36 @@
 Este trabalho foi desenvolvido para a disciplina de Programação para Interfaceamento Hardware Software (Ciência da Computação - UEM) em Agosto/2017 por Ricardo Henrique Brunetto (ra94182@uem.br)
 
 ## Funcionalidade
-Dado um arquivo de entrada que esteja configurado como uma matriz de números inteiros de ordem 3, o programa calcula o Determinante e o valor das variáveis considerando a matriz como um sistema linear, através da aplicação das regras de Sarrus e Cramer.
+Dado um arquivo de entrada que esteja configurado como uma matriz de números inteiros de ordem `n`, o programa calcula o Determinante e o valor das variáveis considerando a matriz como um sistema linear, através da aplicação das regras de Laplace e Cramer.
 
 ## Especificações Tecnológicas
 Todo o programa foi escrito em Assembly-Intel-32. O `makefile` local pode ser perfeitamente utilizado, visto que não há dependências externas que requeiram complexidade.
 
 ## Implementação
-O relatório pode ser encontrado [aqui](Relatório.pdf).
+O relatório pode ser encontrado [aqui](Relatório/Documento.pdf).
 
 ## Lista de Afazeres
 - [x] Entrada
-- [x] Cálculo do determinante (Sarrus)
-  - [x] Cálculo de Sarrus
-    - [x] Lógica para calcular o determinante por produtos
+  - [x] Entrada por arquivo
+- [x] Cálculo do determinante (Laplace)
+  - [x] Gerar matriz sem a última coluna (coeficientes)
+  - [x] Gerar submatriz (cofator Aij)
+  - [x] Cálculo do sinal de cofator
+  - [x] Cálculo de Laplace
+    - [x] Lógica para calcular o determinante parcialmente
 - [x] Principal
   - [x] Sequência correta dependendo da ordem
 - [x] Copiar a coluna Z
 - [x] Regra de Cramer
+- [ ] Usar ponto flutuante
+  - [x] Alterar os espaços de armazenamento
+  - [ ] Lógica de cada procedimento usando a pilha FPU
+- [ ] Utilizar vetor de variáveis
+- [ ] Otimizar quando o coeficiente for zero
+
+### Limitações e Sugestões
+- Não foram adaptadas as operações para o uso de ponto flutuante. Segue como sugestão para trabalhos futuros.
+- Não foram implementadas otimizações, como o uso de vetor de variáveis e poupar os cálculos quando o coeficiente for zero. Segue como sugestão para trabalhos futuros.
 
 ## Licença
 Este projeto segue a licença [Creative Commons Attribution-ShareAlike (BY-SA)](https://creativecommons.org/licenses/by-sa/4.0/), que está detalhada no arquivo [`LICENSE.md`](LICENSE.md).
